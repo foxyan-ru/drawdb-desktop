@@ -22,46 +22,25 @@ Grab the installer for your OS from the **[Releases page](https://github.com/rai
 
 ## Demo
 
-<!-- ============================================================
-     VIDEO TEMPLATE
-     How to add: drag & drop an .mp4/.mov file (up to 10 MB) onto
-     this README while editing it on github.com. GitHub converts
-     it and pastes a <video> tag — replace the src below.
-     ============================================================ -->
-<!--
-<video src="https://github.com/user-attachments/assets/REPLACE-WITH-YOUR-VIDEO-UUID" controls="controls" max-width="700px"></video>
--->
+<p align="center">
+  <video src="demo/demo.webm" controls width="800"></video>
+</p>
 
-_Demo video coming soon — replace the block above._
+_Walkthrough of the Windows build: creating tables, connecting `cart.user_id` → `user.id` by dragging a field's grip dot, and editing cardinality._
+
+> If the video doesn't play inline, [open it directly](demo/demo.webm) or download it.
 
 ## Screenshots
 
-<!-- ============================================================
-     SCREENSHOT TEMPLATE
-     How to add (pick one):
-       A) Drag & drop images onto this README while editing it on
-          github.com, then paste the generated URL into src= below.
-       B) Commit images to docs/screenshots/ and use the relative
-          paths shown in the second template.
-     ============================================================ -->
-
-<!-- Template A — hosted image URL (drag & drop on github.com): -->
-<!--
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/REPLACE-WITH-SCREENSHOT-UUID" alt="Main editor" width="800">
+  <img src="demo/demo.jpeg" alt="DrawDB light mode — cart and user tables with a 1:N relationship" width="800">
 </p>
--->
 
-<!-- Template B — local file committed to the repo: -->
-<!--
 <p align="center">
-  <img src="docs/screenshots/editor.png" alt="Main editor" width="800">
+  <img src="demo/demo2.jpeg" alt="DrawDB dark mode — same diagram" width="800">
 </p>
--->
 
-_Screenshots coming soon — replace the blocks above._
-
-Suggested shots: **main editor with a sample diagram** · **relationship/cardinality editing** · **SQL export dialog** · **dark mode**.
+Same diagram in **light** and **dark** themes: `cart.user_id` → `user.id` created by dragging the field grip dot (FK badge, `1..n` cardinality, relationship mode hint on the right).
 
 ## Features
 
