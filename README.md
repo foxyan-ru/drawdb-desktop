@@ -141,11 +141,11 @@ bun run lint    # svelte-check (type checking)
 bun run test    # bun test
 ```
 
-See [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md) for cross-compilation targets and advanced options.
+See [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md) for cross-compilation targets and advanced options, and [BUILD_GUIDE.md](BUILD_GUIDE.md) for the full CI/release runbook and a catalog of build errors with their fixes.
 
 ## Continuous integration
 
-Every push to `main` runs **lint + tests**, then builds all three platforms in GitHub Actions. Pushing a `v*` tag additionally publishes a **draft release** with the installers attached to this repository — review it, then click **Publish release**.
+Every push to `main` runs **lint + tests**, then builds all three platforms in GitHub Actions. Pushing a `v*` tag additionally publishes a **draft release** with the installers attached to this repository — review it, then click **Publish release**. The workflow is documented in [BUILD_GUIDE.md](BUILD_GUIDE.md).
 
 ## Project structure
 
