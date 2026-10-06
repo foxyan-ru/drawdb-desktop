@@ -18,7 +18,7 @@
     "fs:allow-remove",
     "fs:allow-rename",
     "fs:allow-stat",
-    "fs:allow-readdir",
+    "fs:allow-read-dir",
     "fs:allow-appdata-read-recursive",
     "fs:allow-appdata-write-recursive",
     "fs:allow-document-read-recursive",
