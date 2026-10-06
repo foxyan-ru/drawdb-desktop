@@ -67,42 +67,42 @@
   });
 
   function getPointerDiagram(e: PointerEvent | MouseEvent | WheelEvent) {
-    const $screenSize = get(screenSize);
-    const $viewBox = get(viewBox);
+    const currentScreenSize = get(screenSize);
+    const currentViewBox = get(viewBox);
     const rect = svgEl?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
-    const result = toDiagramSpace({ x: sx, y: sy }, $screenSize, $viewBox);
+    const result = toDiagramSpace({ x: sx, y: sy }, currentScreenSize, currentViewBox);
     return { x: result.x ?? 0, y: result.y ?? 0 };
   }
 
   function handleWheel(e: WheelEvent) {
     e.preventDefault();
-    const $t = get(transform);
+    const currentTransform = get(transform);
     const diagPt = getPointerDiagram(e);
 
     if (e.ctrlKey || e.metaKey) {
       // Zoom toward pointer
       const eagernessFactor = 0.05;
       const direction = Math.sign(e.deltaY);
-      const newZoom = e.deltaY <= 0 ? $t.zoom * 1.05 : $t.zoom / 1.05;
+      const newZoom = e.deltaY <= 0 ? currentTransform.zoom * 1.05 : currentTransform.zoom / 1.05;
       setTransform({
         zoom: newZoom,
         pan: {
-          x: $t.pan.x - (diagPt.x - $t.pan.x) * eagernessFactor * direction,
-          y: $t.pan.y - (diagPt.y - $t.pan.y) * eagernessFactor * direction
+          x: currentTransform.pan.x - (diagPt.x - currentTransform.pan.x) * eagernessFactor * direction,
+          y: currentTransform.pan.y - (diagPt.y - currentTransform.pan.y) * eagernessFactor * direction
         }
       });
     } else if (e.shiftKey) {
       // Horizontal scroll
       setTransform({
-        pan: { x: $t.pan.x + e.deltaY / $t.zoom, y: $t.pan.y }
+        pan: { x: currentTransform.pan.x + e.deltaY / currentTransform.zoom, y: currentTransform.pan.y }
       });
     } else {
       // Vertical scroll
       setTransform({
-        pan: { x: $t.pan.x, y: $t.pan.y + e.deltaY / $t.zoom }
+        pan: { x: currentTransform.pan.x, y: currentTransform.pan.y + e.deltaY / currentTransform.zoom }
       });
     }
   }
@@ -117,8 +117,8 @@
     if (isMiddle || isRight) {
       // Start panning
       isPanning = true;
-      const $t = get(transform);
-      panStart = { x: $t.pan.x, y: $t.pan.y };
+      const currentTransform = get(transform);
+      panStart = { x: currentTransform.pan.x, y: currentTransform.pan.y };
       const rect = svgEl?.getBoundingClientRect();
       cursorScreenStart = {
         x: e.clientX - (rect?.left ?? 0),
@@ -141,7 +141,7 @@
     pointerDiagram = diagPt;
 
     if (isPanning) {
-      const $t = get(transform);
+      const currentTransform = get(transform);
       const rect = svgEl?.getBoundingClientRect();
       const cursorScreen = {
         x: e.clientX - (rect?.left ?? 0),
@@ -149,8 +149,8 @@
       };
       setTransform({
         pan: {
-          x: panStart.x + (cursorScreenStart.x - cursorScreen.x) / $t.zoom,
-          y: panStart.y + (cursorScreenStart.y - cursorScreen.y) / $t.zoom
+          x: panStart.x + (cursorScreenStart.x - cursorScreen.x) / currentTransform.zoom,
+          y: panStart.y + (cursorScreenStart.y - cursorScreen.y) / currentTransform.zoom
         }
       });
       return;
@@ -173,8 +173,8 @@
 
     // Handle area resize
     if (areaResize.id !== -1 && areaResize.dir !== 'none') {
-      const $areas = get(areas);
-      const area = $areas.find((a) => a.id === areaResize.id);
+      const currentAreas = get(areas);
+      const area = currentAreas.find((a) => a.id === areaResize.id);
       if (!area) return;
 
       let newDims = { ...areaInitDims };
@@ -274,31 +274,6 @@
     };
   }
 
-  // Derived values from stores
-  let $tables = $state<TableType[]>([]);
-  let $relationships = $state<any[]>([]);
-  let $areas = $state<AreaType[]>([]);
-  let $notes = $state<NoteType[]>([]);
-  let $settings = $state<any>({});
-  let $viewBox = $state({ x: 0, y: 0, width: 0, height: 0 });
-
-  $effect(() => {
-    const unsubTables = tables.subscribe((v) => ($tables = v));
-    const unsubRels = relationships.subscribe((v) => ($relationships = v));
-    const unsubAreas = areas.subscribe((v) => ($areas = v));
-    const unsubNotes = notes.subscribe((v) => ($notes = v));
-    const unsubSettings = settings.subscribe((v) => ($settings = v));
-    const unsubViewBox = viewBox.subscribe((v) => ($viewBox = v));
-
-    return () => {
-      unsubTables();
-      unsubRels();
-      unsubAreas();
-      unsubNotes();
-      unsubSettings();
-      unsubViewBox();
-    };
-  });
 </script>
 
 <div

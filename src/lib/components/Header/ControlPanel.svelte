@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { get } from 'svelte/store';
 	import { _ } from 'svelte-i18n';
 	import { database } from '$lib/stores/diagram';
 	import { settings, type Settings } from '$lib/stores/settings';
 	import { layout } from '$lib/stores/layout';
-	import { saveState, currentDiagramName, currentDiagramPath } from '$lib/stores/saveState';
+	import { saveState, currentDiagramName } from '$lib/stores/saveState';
 	import { undoStack, redoStack } from '$lib/stores/undoRedo';
 	import { transform, setTransform } from '$lib/stores/transform';
 	import { openModal } from '$lib/stores/modal';
@@ -29,31 +28,6 @@
 	let dbMenuOpen = $state(false);
 	let fileMenuOpen = $state(false);
 	let viewMenuOpen = $state(false);
-
-	let $settings = $state<Settings>(get(settings));
-	let $saveState = $state(get(saveState));
-	let $currentDiagramName = $state(get(currentDiagramName));
-	let $currentDiagramPath = $state<string | null>(get(currentDiagramPath));
-	let $undoStack = $state<any[]>(get(undoStack));
-	let $redoStack = $state<any[]>(get(redoStack));
-	let $transform = $state(get(transform));
-	let $layout = $state(get(layout));
-	let $database = $state<DBType>(get(database));
-
-	$effect(() => {
-		const unsubs = [
-			settings.subscribe((v) => ($settings = v)),
-			saveState.subscribe((v) => ($saveState = v)),
-			currentDiagramName.subscribe((v) => ($currentDiagramName = v)),
-			currentDiagramPath.subscribe((v) => ($currentDiagramPath = v)),
-			undoStack.subscribe((v) => ($undoStack = v)),
-			redoStack.subscribe((v) => ($redoStack = v)),
-			transform.subscribe((v) => ($transform = v)),
-			layout.subscribe((v) => ($layout = v)),
-			database.subscribe((v) => ($database = v))
-		];
-		return () => unsubs.forEach((u) => u());
-	});
 
 	function closeMenus() {
 		dbMenuOpen = false;

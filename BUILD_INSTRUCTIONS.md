@@ -3,9 +3,8 @@
 ## Prerequisites
 
 ### All Platforms
-- **Node.js** 20+ (https://nodejs.org)
+- **Bun** 1.0+ (https://bun.sh)
 - **Rust** stable toolchain (https://rustup.rs)
-- **npm** (comes with Node.js)
 
 ### Windows
 - Microsoft Visual Studio C++ Build Tools
@@ -27,22 +26,19 @@ sudo apt install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patc
    cd drawdb-desktop
    ```
 
-2. **Install Node.js dependencies:**
+2. **Install dependencies:**
    ```bash
-   npm install
+   bun install
    ```
 
-3. **Install Tauri CLI (if not already installed):**
-   ```bash
-   npm install -g @tauri-apps/cli
-   ```
+The Tauri CLI is included as a dev dependency, so no global install is needed.
 
 ## Development
 
 Run the app in development mode with hot-reload:
 
 ```bash
-npm run tauri:dev
+bun run tauri:dev
 ```
 
 This starts the Vite dev server and the Tauri window simultaneously. Changes to Svelte files reload instantly; changes to Rust files trigger a recompile.
@@ -52,7 +48,7 @@ This starts the Vite dev server and the Tauri window simultaneously. Changes to 
 ### Build the executable:
 
 ```bash
-npm run tauri:build
+bun run tauri:build
 ```
 
 This produces optimized, distributable binaries in `src-tauri/target/release/bundle/`:
@@ -67,21 +63,33 @@ This produces optimized, distributable binaries in `src-tauri/target/release/bun
 
 ```bash
 # Windows (from Windows)
-npm run tauri build -- --target x86_64-pc-windows-msvc
+bunx tauri build --target x86_64-pc-windows-msvc
 
 # macOS Apple Silicon
-npm run tauri build -- --target aarch64-apple-darwin
+bunx tauri build --target aarch64-apple-darwin
 
 # macOS Intel
-npm run tauri build -- --target x86_64-apple-darwin
+bunx tauri build --target x86_64-apple-darwin
 
 # Linux
-npm run tauri build -- --target x86_64-unknown-linux-gnu
+bunx tauri build --target x86_64-unknown-linux-gnu
 ```
+
+## Lint & Test
+
+```bash
+bun run lint   # svelte-check: Svelte template + TypeScript errors
+bun run test   # bun test: unit tests
+```
+
+Both run in CI before any build starts.
 
 ## GitHub Actions CI/CD
 
-The included `.github/workflows/build.yml` workflow automatically builds for all platforms when you push a version tag:
+The included `.github/workflows/build.yml` workflow runs in two stages:
+
+- **Lint & Test** (`bun run lint`, `bun run test`) on every push to `main`, every pull request, and manual runs.
+- **Build** for all platforms once checks pass, on version tags or manual runs. Installers are uploaded as workflow artifacts, and pushing a version tag also creates a draft GitHub Release:
 
 ```bash
 git tag v1.0.0
@@ -120,7 +128,7 @@ drawdb-desktop/
 │   └── capabilities/             # Tauri security permissions
 ├── static/                       # Static assets
 ├── .github/workflows/build.yml   # CI/CD pipeline
-├── package.json                  # Node.js dependencies
+├── package.json                  # Bun dependencies
 ├── svelte.config.js              # SvelteKit config (static adapter)
 ├── vite.config.ts                # Vite config with Tauri integration
 └── tsconfig.json                 # TypeScript config

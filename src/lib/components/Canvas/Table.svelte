@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { get } from 'svelte/store';
   import { settings } from '$lib/stores/settings';
   import { selectedElement } from '$lib/stores/select';
   import { relationships, updateTable } from '$lib/stores/diagram';
@@ -14,21 +13,6 @@
 
   let { table, onDragStart }: { table: Table; onDragStart: (e: PointerEvent) => void } =
     $props();
-
-  let $settings = $state<any>({});
-  let $selectedElement = $state<any>({});
-  let $relationships = $state<any[]>([]);
-
-  $effect(() => {
-    const unsub1 = settings.subscribe((v) => ($settings = v));
-    const unsub2 = selectedElement.subscribe((v) => ($selectedElement = v));
-    const unsub3 = relationships.subscribe((v) => ($relationships = v));
-    return () => {
-      unsub1();
-      unsub2();
-      unsub3();
-    };
-  });
 
   let hovered = $state(false);
 

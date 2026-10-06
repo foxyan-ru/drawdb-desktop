@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { get } from 'svelte/store';
   import { tables } from '$lib/stores/diagram';
   import { settings } from '$lib/stores/settings';
   import { selectedElement } from '$lib/stores/select';
@@ -16,21 +15,6 @@
   } from '$lib/data/constants';
 
   let { relationship }: { relationship: Relationship } = $props();
-
-  let $tables = $state<Table[]>([]);
-  let $settings = $state<any>({});
-  let $selectedElement = $state<any>({});
-
-  $effect(() => {
-    const unsub1 = tables.subscribe((v) => ($tables = v));
-    const unsub2 = settings.subscribe((v) => ($settings = v));
-    const unsub3 = selectedElement.subscribe((v) => ($selectedElement = v));
-    return () => {
-      unsub1();
-      unsub2();
-      unsub3();
-    };
-  });
 
   let hovered = $state(false);
   let pathEl: SVGPathElement | undefined = $state(undefined);

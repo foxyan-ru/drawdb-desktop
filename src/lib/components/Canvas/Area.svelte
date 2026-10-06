@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { get } from 'svelte/store';
   import { settings } from '$lib/stores/settings';
   import { selectedElement } from '$lib/stores/select';
   import { ObjectType, Tab, type Area } from '$lib/data/constants';
@@ -13,18 +12,6 @@
     onDragStart: (e: PointerEvent) => void;
     onResizeStart: (dir: string) => void;
   } = $props();
-
-  let $settings = $state<any>({});
-  let $selectedElement = $state<any>({});
-
-  $effect(() => {
-    const unsub1 = settings.subscribe((v) => ($settings = v));
-    const unsub2 = selectedElement.subscribe((v) => ($selectedElement = v));
-    return () => {
-      unsub1();
-      unsub2();
-    };
-  });
 
   let hovered = $state(false);
 
