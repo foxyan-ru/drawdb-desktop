@@ -43,19 +43,6 @@
     }
   },
   "plugins": {
-    "fs": {
-      "scope": {
-        "allow": [
-          { "path": "$APPDATA/**", "permission": "readwrite" },
-          { "path": "$DOCUMENT/**", "permission": "readwrite" },
-          { "path": "$HOME/**", "permission": "readwrite" },
-          { "path": "$DESKTOP/**", "permission": "readwrite" }
-        ]
-      }
-    },
-    "dialog": {
-      "all": true
-    },
     "shell": {
       "open": true
     }
