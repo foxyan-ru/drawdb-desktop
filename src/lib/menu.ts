@@ -1,4 +1,5 @@
 import { get } from 'svelte/store';
+import type { MenuItem as MenuItemInstance, PredefinedMenuItem as PredefinedMenuItemInstance } from '@tauri-apps/api/menu';
 
 /**
  * Builds and applies a REAL native OS menu (macOS global menu bar / Windows &
@@ -51,7 +52,7 @@ export async function setupNativeMenu(): Promise<void> {
 			}
 		};
 
-		let quitItem: MenuItem | InstanceType<typeof PredefinedMenuItem>;
+		let quitItem: MenuItemInstance | PredefinedMenuItemInstance;
 		try {
 			quitItem = await PredefinedMenuItem.new({ text: 'Quit', item: 'Quit' });
 		} catch {

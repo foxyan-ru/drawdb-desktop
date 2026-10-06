@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 import { MODAL } from '$lib/data/constants';
 
-export const currentModal = writable(MODAL.NONE);
+export const currentModal = writable<number>(MODAL.NONE);
 export const modalData = writable<any>(null);
 
 export function openModal(modal: number, data?: any) {

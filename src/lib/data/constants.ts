@@ -138,6 +138,7 @@ export interface Relationship {
 	updateConstraint: string;
 	deleteConstraint: string;
 	fields?: { startFieldId: string; endFieldId: string }[];
+	color?: string;
 }
 
 export interface Area {
