@@ -10,7 +10,6 @@
     "beforeBuildCommand": "npm run build"
   },
   "app": {
-    "title": "DrawDB",
     "windows": [
       {
         "title": "DrawDB - Database Diagram Editor",
