@@ -44,15 +44,18 @@ jobs:
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
             name: windows-x64
-          - platform: macos-latest
-            target: aarch64-apple-darwin
-            name: macos-aarch64
+            installers: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
           - platform: macos-latest
             target: x86_64-apple-darwin
             name: macos-x64
+            installers: src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             name: linux-x64
+            installers: |
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
 
     runs-on: ${{ matrix.platform }}
 
@@ -89,11 +92,22 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: drawdb-${{ matrix.name }}
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/**
+          path: ${{ matrix.installers }}
           if-no-files-found: error
 
+  release:
+    name: Draft GitHub release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          path: installers
+          merge-multiple: true
+
       - name: Draft GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.RAINMAN_TOKEN }}
@@ -101,4 +115,5 @@ jobs:
           draft: true
           name: DrawDB Desktop ${{ github.ref_name }}
           body: 'See the assets below to download and install DrawDB Desktop.'
-          files: src-tauri/target/${{ matrix.target }}/release/bundle/**/*
+          files: installers/**/*
+          fail_on_unmatched_files: true
