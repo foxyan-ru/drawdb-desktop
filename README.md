@@ -1,6 +1,6 @@
 # DrawDB Desktop
 
-![CI](https://github.com/foxyan-ru/drawdb-desktop/actions/workflows/build.yml/badge.svg)
+![CI](https://github.com/rainman456/drawdb-desktop/actions/workflows/build.yml/badge.svg)
 ![Latest Release](https://img.shields.io/github/v/release/rainman456/drawdb-desktop)
 ![Downloads](https://img.shields.io/github/downloads/rainman456/drawdb-desktop/total)
 
