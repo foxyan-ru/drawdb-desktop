@@ -121,26 +121,26 @@
 					<div class="mb-2">
 						<span class="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">{$_('values')}</span>
 						{#each item.values as val, index}
-							<div class="mb-1 flex items-center gap-1.5">
+							<div class="mb-2 flex items-center gap-2">
 								<input
 									type="text"
-									class="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-2 py-0.5 text-xs text-zinc-900 focus:border-blue-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100"
+									class="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-900 focus:border-blue-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100"
 									value={val}
 									oninput={(e) => handleValueChange(item.id, index, e.currentTarget.value)}
 								/>
 								<button
-									class="flex-shrink-0 rounded p-0.5 text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/30"
+									class="flex-shrink-0 rounded p-1 text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/30"
 									title={$_('remove_value')}
 									onclick={() => handleRemoveValue(item.id, index)}
 								>
-									<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
 										<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
 									</svg>
 								</button>
 							</div>
 						{/each}
 						<button
-							class="mt-1 w-full rounded border border-dashed border-zinc-300 py-1 text-xs text-zinc-500 transition-colors hover:border-blue-400 hover:text-blue-600 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-blue-500 dark:hover:text-blue-400"
+							class="mt-2 w-full rounded border border-dashed border-zinc-300 py-1.5 text-xs text-zinc-500 transition-colors hover:border-blue-400 hover:text-blue-600 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-blue-500 dark:hover:text-blue-400"
 							onclick={() => handleAddValue(item.id)}
 						>
 							+ {$_('add_value')}

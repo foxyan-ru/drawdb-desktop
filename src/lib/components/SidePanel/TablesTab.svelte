@@ -226,80 +226,80 @@
 					<!-- Fields -->
 					<div class="mb-2">
 						<span class="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">{$_('fields')}</span>
-						{#each table.fields as field (field.id)}
-							<div class="mb-1.5 rounded border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-600 dark:bg-zinc-800">
-								<div class="mb-1.5 flex items-center gap-1.5">
-									<input
-										type="text"
-										class="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-xs text-zinc-900 focus:border-blue-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100"
-										value={field.name}
-										oninput={(e) => handleFieldNameChange(table.id, field.id, e.currentTarget.value)}
-									/>
-									<select
-										class="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-1 py-0.5 text-xs text-zinc-900 focus:border-blue-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100"
-										value={field.type}
-										onchange={(e) => handleFieldTypeChange(table.id, field.id, e.currentTarget.value)}
-									>
-										{#each commonTypes as t}
-											<option value={t}>{t}</option>
-										{/each}
-									</select>
-									<button
-										class="flex-shrink-0 rounded p-0.5 text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/30"
-										title={$_('delete_field')}
-										onclick={() => handleDeleteField(table.id, field.id)}
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-											<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-										</svg>
-									</button>
-								</div>
-								<div class="flex flex-wrap gap-2 text-[10px]">
-									<label class="flex items-center gap-0.5 text-zinc-600 dark:text-zinc-400">
-										<input
-											type="checkbox"
-											checked={field.primary}
-											onchange={() => handleFieldPrimaryToggle(table.id, field.id, field.primary)}
-											class="h-3 w-3"
-										/>
-										PK
-									</label>
-									<label class="flex items-center gap-0.5 text-zinc-600 dark:text-zinc-400">
-										<input
-											type="checkbox"
-											checked={field.notNull}
-											onchange={() => handleFieldNotNullToggle(table.id, field.id, field.notNull)}
-											class="h-3 w-3"
-										/>
-										NN
-									</label>
-									<label class="flex items-center gap-0.5 text-zinc-600 dark:text-zinc-400">
-										<input
-											type="checkbox"
-											checked={field.unique}
-											onchange={() => handleFieldUniqueToggle(table.id, field.id, field.unique)}
-											class="h-3 w-3"
-										/>
-										UQ
-									</label>
-									<label class="flex items-center gap-0.5 text-zinc-600 dark:text-zinc-400">
-										<input
-											type="checkbox"
-											checked={field.increment}
-											onchange={() => handleFieldIncrementToggle(table.id, field.id, field.increment)}
-											class="h-3 w-3"
-										/>
-										AI
-									</label>
-								</div>
+					{#each table.fields as field (field.id)}
+						<div class="mb-2 rounded border border-zinc-200 bg-zinc-50 p-2.5 dark:border-zinc-600 dark:bg-zinc-800">
+							<div class="mb-2 flex items-center gap-2">
+								<input
+									type="text"
+									class="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-900 focus:border-blue-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100"
+									value={field.name}
+									oninput={(e) => handleFieldNameChange(table.id, field.id, e.currentTarget.value)}
+								/>
+								<select
+									class="min-w-0 flex-1 rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-900 focus:border-blue-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-700 dark:text-zinc-100"
+									value={field.type}
+									onchange={(e) => handleFieldTypeChange(table.id, field.id, e.currentTarget.value)}
+								>
+									{#each commonTypes as t}
+										<option value={t}>{t}</option>
+									{/each}
+								</select>
+								<button
+									class="flex-shrink-0 rounded p-1 text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/30"
+									title={$_('delete_field')}
+									onclick={() => handleDeleteField(table.id, field.id)}
+								>
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+										<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+									</svg>
+								</button>
 							</div>
-						{/each}
-						<button
-							class="mt-1 w-full rounded border border-dashed border-zinc-300 py-1 text-xs text-zinc-500 transition-colors hover:border-blue-400 hover:text-blue-600 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-blue-500 dark:hover:text-blue-400"
-							onclick={() => handleAddField(table.id)}
-						>
-							+ {$_('add_field')}
-						</button>
+							<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-[11px]">
+								<label class="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
+									<input
+										type="checkbox"
+										checked={field.primary}
+										onchange={() => handleFieldPrimaryToggle(table.id, field.id, field.primary)}
+										class="h-3.5 w-3.5"
+									/>
+									PK
+								</label>
+								<label class="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
+									<input
+										type="checkbox"
+										checked={field.notNull}
+										onchange={() => handleFieldNotNullToggle(table.id, field.id, field.notNull)}
+										class="h-3.5 w-3.5"
+									/>
+									NN
+								</label>
+								<label class="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
+									<input
+										type="checkbox"
+										checked={field.unique}
+										onchange={() => handleFieldUniqueToggle(table.id, field.id, field.unique)}
+										class="h-3.5 w-3.5"
+									/>
+									UQ
+								</label>
+								<label class="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
+									<input
+										type="checkbox"
+										checked={field.increment}
+										onchange={() => handleFieldIncrementToggle(table.id, field.id, field.increment)}
+										class="h-3.5 w-3.5"
+									/>
+									AI
+								</label>
+							</div>
+						</div>
+					{/each}
+					<button
+						class="mt-2 w-full rounded border border-dashed border-zinc-300 py-1.5 text-xs text-zinc-500 transition-colors hover:border-blue-400 hover:text-blue-600 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-blue-500 dark:hover:text-blue-400"
+						onclick={() => handleAddField(table.id)}
+					>
+						+ {$_('add_field')}
+					</button>
 					</div>
 
 					<!-- Delete table button -->

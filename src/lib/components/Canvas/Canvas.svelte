@@ -1,5 +1,6 @@
 <script lang="ts">
   import { get } from 'svelte/store';
+  import { nanoid } from 'nanoid';
   import {
     transform,
     setTransform,
@@ -8,13 +9,30 @@
     toDiagramSpace,
     canvasSvgEl
   } from '$lib/stores/transform';
-  import { tables, relationships, areas, notes, updateTable, updateArea, updateNote } from '$lib/stores/diagram';
+  import {
+    tables,
+    relationships,
+    areas,
+    notes,
+    updateTable,
+    updateArea,
+    updateNote,
+    addRelationship
+  } from '$lib/stores/diagram';
+  import { connecting } from '$lib/stores/connect';
   import { settings } from '$lib/stores/settings';
   import { selectedElement, clearSelection } from '$lib/stores/select';
   import {
     gridSize,
     gridCircleRadius,
+    tableHeaderHeight,
+    tableFieldHeight,
+    tableColorStripHeight,
+    Cardinality,
+    Constraint,
     ObjectType,
+    Tab,
+    type Relationship as RelationshipType,
     type Table as TableType,
     type Area as AreaType,
     type Note as NoteType
@@ -140,6 +158,10 @@
     const diagPt = getPointerDiagram(e);
     pointerDiagram = diagPt;
 
+    if ($connecting) {
+      connecting.update((c) => (c ? { ...c, x: diagPt.x, y: diagPt.y } : c));
+    }
+
     if (isPanning) {
       const currentTransform = get(transform);
       const rect = svgEl?.getBoundingClientRect();
@@ -225,9 +247,79 @@
   function handlePointerUp(e: PointerEvent) {
     if (!e.isPrimary) return;
     isPanning = false;
+    if ($connecting) finishConnect(e);
     dragging = { id: -1, type: ObjectType.NONE, grabOffset: { x: 0, y: 0 } };
     areaResize = { id: -1, dir: 'none' };
   }
+
+  function finishConnect(e: PointerEvent) {
+    const c = $connecting;
+    connecting.set(null);
+    if (!c) return;
+
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const row = el?.closest?.('[data-field-row]') as HTMLElement | null;
+    if (!row?.dataset) return;
+    const endTableId = row.dataset.tableId;
+    const endFieldId = row.dataset.fieldId;
+    if (!endTableId || !endFieldId) return;
+    if (endTableId === c.from.tableId && endFieldId === c.from.fieldId) return;
+
+    const startTable = $tables.find((t) => t.id === c.from.tableId);
+    const endTable = $tables.find((t) => t.id === endTableId);
+    if (!startTable || !endTable) return;
+
+    const alreadyLinked = $relationships.some(
+      (r) =>
+        (r.startTableId === c.from.tableId &&
+          r.startFieldId === c.from.fieldId &&
+          r.endTableId === endTableId &&
+          r.endFieldId === endFieldId) ||
+        (r.endTableId === c.from.tableId &&
+          r.endFieldId === c.from.fieldId &&
+          r.startTableId === endTableId &&
+          r.startFieldId === endFieldId)
+    );
+    if (alreadyLinked) return;
+
+    const rel: RelationshipType = {
+      id: nanoid(),
+      name: `${startTable.name}_${endTable.name}`,
+      startTableId: c.from.tableId,
+      startFieldId: c.from.fieldId,
+      endTableId,
+      endFieldId,
+      cardinality: Cardinality.MANY_TO_ONE,
+      updateConstraint: Constraint.NONE,
+      deleteConstraint: Constraint.NONE
+    };
+    addRelationship(rel);
+    selectedElement.set({
+      element: ObjectType.RELATIONSHIP,
+      id: rel.id,
+      open: false,
+      currentTab: Tab.RELATIONSHIPS
+    });
+  }
+
+  // Live preview line while dragging a connection between fields
+  let connectPath = $derived.by(() => {
+    const c = $connecting;
+    if (!c || c.x === null || c.y === null) return '';
+    const sourceTable = $tables.find((t) => t.id === c.from.tableId);
+    if (!sourceTable) return '';
+    const fieldIndex = sourceTable.fields.findIndex((f) => f.id === c.from.fieldId);
+    const w = $settings.tableWidth || 220;
+    const anchorY =
+      sourceTable.y +
+      tableColorStripHeight +
+      tableHeaderHeight +
+      Math.max(fieldIndex, 0) * tableFieldHeight +
+      tableFieldHeight / 2;
+    const anchorX = c.x >= sourceTable.x + w / 2 ? sourceTable.x + w : sourceTable.x;
+    const midX = (anchorX + c.x) / 2;
+    return `M ${anchorX} ${anchorY} Q ${midX} ${anchorY} ${c.x} ${c.y}`;
+  });
 
   function handleCanvasClick(e: MouseEvent) {
     // Only deselect if clicking on the SVG background itself
@@ -292,6 +384,7 @@
     onpointerdown={handlePointerDown}
     onpointermove={handlePointerMove}
     onpointerup={handlePointerUp}
+    onpointercancel={handlePointerUp}
     onclick={handleCanvasClick}
     oncontextmenu={(e) => e.preventDefault()}
   >
@@ -366,5 +459,21 @@
         }}
       />
     {/each}
+
+    <!-- Live connection preview line -->
+    {#if $connecting && connectPath}
+      <path
+        d={connectPath}
+        fill="none"
+        stroke="#7c3aed"
+        stroke-width="2"
+        stroke-dasharray="6 4"
+        stroke-linecap="round"
+        pointer-events="none"
+      />
+      {#if $connecting.x !== null && $connecting.y !== null}
+        <circle cx={$connecting.x} cy={$connecting.y} r="5" fill="#7c3aed" pointer-events="none" />
+      {/if}
+    {/if}
   </svg>
 </div>

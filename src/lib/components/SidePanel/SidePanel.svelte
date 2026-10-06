@@ -53,12 +53,14 @@
 
 <div class="flex h-full w-[280px] min-w-[280px] flex-col border-r border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-900">
 	<!-- Tab bar -->
-	<div class="flex flex-wrap border-b border-zinc-300 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800">
+	<div
+		class="flex flex-wrap items-center gap-1 border-b border-zinc-300 bg-zinc-50 px-2 pt-2 pb-2 dark:border-zinc-700 dark:bg-zinc-800"
+	>
 		{#each tabDefs as tab (tab.key)}
 			<button
-				class="px-3 py-2 text-xs font-medium transition-colors {currentTab === tab.key
-					? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-					: 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200'}"
+				class="whitespace-nowrap border-b-2 px-2.5 py-1.5 text-xs font-medium transition-colors {currentTab === tab.key
+					? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+					: 'border-transparent text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200'}"
 				onclick={() => switchTab(tab.key)}
 			>
 				{tab.label}
