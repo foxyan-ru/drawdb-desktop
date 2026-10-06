@@ -168,7 +168,7 @@ export async function exportDiagramPNG(): Promise<void> {
 		const bounds = computeContentBounds();
 		const backgroundColor = canvasBackgroundColor();
 		const pngDataUrl = await withFullDiagramCapture(bounds, (svgEl) =>
-			toPng(svgEl, {
+			toPng(svgEl as unknown as HTMLElement, {
 				width: bounds.width,
 				height: bounds.height,
 				pixelRatio: 2,
@@ -199,7 +199,7 @@ export async function exportDiagramSVG(): Promise<void> {
 
 		const bounds = computeContentBounds();
 		const svgDataUrl = await withFullDiagramCapture(bounds, (svgEl) =>
-			toSvg(svgEl, {
+			toSvg(svgEl as unknown as HTMLElement, {
 				width: bounds.width,
 				height: bounds.height
 			})
@@ -229,7 +229,7 @@ export async function exportDiagramPDF(): Promise<void> {
 		const bounds = computeContentBounds();
 		const backgroundColor = canvasBackgroundColor();
 		const pngDataUrl = await withFullDiagramCapture(bounds, (svgEl) =>
-			toPng(svgEl, {
+			toPng(svgEl as unknown as HTMLElement, {
 				width: bounds.width,
 				height: bounds.height,
 				pixelRatio: 2,

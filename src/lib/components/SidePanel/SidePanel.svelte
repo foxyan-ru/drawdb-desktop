@@ -11,7 +11,7 @@
 	import EnumsTab from './EnumsTab.svelte';
 	import TypesTab from './TypesTab.svelte';
 
-	let currentTab = $state(Tab.TABLES);
+	let currentTab = $state<string>(Tab.TABLES);
 	let db = $state($database);
 	let dbInfo = $derived(databases[db]);
 
@@ -35,7 +35,7 @@
 	}
 
 	const tabDefs = $derived.by(() => {
-		const base = [
+		const base: { key: string; label: string }[] = [
 			{ key: Tab.TABLES, label: $_('tables') },
 			{ key: Tab.RELATIONSHIPS, label: $_('relationships') },
 			{ key: Tab.AREAS, label: $_('areas') },
