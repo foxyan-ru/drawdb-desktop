@@ -54,7 +54,8 @@ jobs:
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RAINMAN_TOKEN }}
+          GITHUB_REPOSITORY: rainman456/drawdb-desktop
         with:
           tagName: v__VERSION__
           releaseName: 'DrawDB Desktop v__VERSION__'
@@ -62,3 +63,5 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: --target ${{ matrix.target }}
+          owner: rainman456
+          repo: drawdb-desktop
