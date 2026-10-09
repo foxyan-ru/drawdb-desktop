@@ -22,3 +22,7 @@ Thumbs.db
 # Environment
 .env
 .env.*
+
+# Local agent guidance (never committed)
+CLAUDE.md
+.claude
