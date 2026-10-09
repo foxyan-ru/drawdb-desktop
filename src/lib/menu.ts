@@ -112,15 +112,51 @@ export async function setupNativeMenu(): Promise<void> {
 			]
 		});
 
+		// WHY: a native menu accelerator receives CmdOrCtrl+Z before the webview, which
+		// hijacked text-field undo into diagram undo (audit F-10). Tauri's predefined
+		// Undo/Redo items are macOS-only (unsupported on Windows/Linux), so keep custom
+		// items and route by focus: text undo/redo when an editable element is focused
+		// (standard OS behavior), diagram undo/redo otherwise.
+		const isEditableFocused = () => {
+			const el = document.activeElement as HTMLElement | null;
+			if (!el) return false;
+			const tag = el.tagName;
+			return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+		};
+		const undoOrTextUndo = () => {
+			if (isEditableFocused()) document.execCommand('undo');
+			else handleUndo();
+		};
+		const redoOrTextRedo = () => {
+			if (isEditableFocused()) document.execCommand('redo');
+			else handleRedo();
+		};
+
+		// WHY: on macOS, Cmd+X/C/V/A inside webview text inputs only work when the app
+		// menu provides the corresponding predefined items. Windows/Linux webviews handle
+		// these shortcuts natively, and predefined clipboard items there could intercept
+		// the keys away from WebView2/WebKitGTK, so add them on macOS only.
+		const isMac = /Mac/i.test(navigator.userAgent);
+		const clipboardItems = isMac
+			? [
+					await PredefinedMenuItem.new({ item: 'Separator' }),
+					await PredefinedMenuItem.new({ item: 'Cut' }),
+					await PredefinedMenuItem.new({ item: 'Copy' }),
+					await PredefinedMenuItem.new({ item: 'Paste' }),
+					await PredefinedMenuItem.new({ item: 'SelectAll' })
+				]
+			: [];
+
 		const editMenu = await Submenu.new({
 			text: 'Edit',
 			items: [
-				await MenuItem.new({ text: 'Undo', accelerator: 'CmdOrCtrl+Z', action: () => handleUndo() }),
+				await MenuItem.new({ text: 'Undo', accelerator: 'CmdOrCtrl+Z', action: undoOrTextUndo }),
 				await MenuItem.new({
 					text: 'Redo',
 					accelerator: 'CmdOrCtrl+Shift+Z',
-					action: () => handleRedo()
-				})
+					action: redoOrTextRedo
+				}),
+				...clipboardItems
 			]
 		});
 

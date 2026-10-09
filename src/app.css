@@ -1,5 +1,10 @@
 @import 'tailwindcss';
 
+/* WHY: Tailwind 4's `dark:` variant follows `prefers-color-scheme` by default, but the
+   in-app theme toggle (stores/settings.ts) drives a `.dark` class on <html>. Key `dark:`
+   off that class so every utility follows the toggle, independent of the OS theme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
 	--color-primary: #175e7a;
 	--color-primary-light: #1e7a9e;
@@ -17,11 +22,11 @@
 	--sidebar-width: 280px;
 }
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--color-canvas-bg: #16161a;
-		--color-canvas-grid: #2a2a2e;
-	}
+/* Dark theme vars follow the in-app `.dark` class, not the OS media query.
+   Canvas bg matches web's dark canvas color (drawdb-main/src/data/constants.js:7). */
+.dark {
+	--color-canvas-bg: #16161a;
+	--color-canvas-grid: #2a2a2e;
 }
 
 * {
