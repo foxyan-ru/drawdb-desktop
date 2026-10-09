@@ -303,17 +303,21 @@
 		pendingImport = null;
 		try {
 			const schema = await introspect(conn.id);
-			const $tables = get(tables);
-			const diagramEmpty = $tables.length === 0 && get(relationships).length === 0;
+			const existingTables = get(tables);
+			const diagramEmpty = existingTables.length === 0 && get(relationships).length === 0;
 			const width = get(settings).tableWidth;
 			const result = introspectToDiagram(schema, {
 				// An empty diagram adopts the connection's engine (applied on confirm),
 				// so types are mapped for that dialect; otherwise keep the diagram's.
 				database: diagramEmpty ? kindToDB(conn.spec.kind) : get(database),
-				origin: placementOrigin($tables, get(transform).pan, width),
+				origin: placementOrigin(existingTables, get(transform).pan, width),
 				tableWidth: width
 			});
-			pendingImport = { result, conflicts: findNameConflicts(result.tables, $tables), kind: conn.spec.kind };
+			pendingImport = {
+				result,
+				conflicts: findNameConflicts(result.tables, existingTables),
+				kind: conn.spec.kind
+			};
 		} catch {
 			// error is surfaced via connectionStatus
 		}
