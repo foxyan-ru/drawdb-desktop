@@ -1,10 +1,15 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { addTable, addArea, addNote } from '$lib/stores/diagram';
+	import { addView } from '$lib/stores/views';
 	import { relationshipMode } from '$lib/stores/connect';
 
 	function handleAddTable() {
 		addTable();
+	}
+
+	function handleAddView() {
+		addView();
 	}
 
 	function handleAddArea() {
@@ -40,6 +45,18 @@
 			<line x1="3" y1="9" x2="21" y2="9"/>
 			<line x1="3" y1="15" x2="21" y2="15"/>
 			<line x1="9" y1="3" x2="9" y2="21"/>
+		</svg>
+	</button>
+
+	<!-- Add View -->
+	<button
+		class="w-10 h-10 rounded-full bg-cyan-600 hover:bg-cyan-700 text-white shadow-lg flex items-center justify-center transition-colors"
+		title={$_('add_view')}
+		onclick={handleAddView}
+	>
+		<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+			<circle cx="12" cy="12" r="3"/>
 		</svg>
 	</button>
 

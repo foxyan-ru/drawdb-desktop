@@ -1,6 +1,6 @@
 // WHY relative imports: `bun test` does not resolve the SvelteKit `$lib` alias,
 // so modules covered by unit tests import siblings relatively (see connections.ts).
-import type { Table, Field, Relationship, EnumType, CustomType } from '../../data/constants';
+import type { Table, Field, Relationship, EnumType, CustomType, View } from '../../data/constants';
 import { dbToTypes, type DataTypeInfo } from '../../data/datatypes';
 
 export interface Diagram {
@@ -11,6 +11,9 @@ export interface Diagram {
 	// matching drawdb-main/src/utils/exportSQL/postgres.js:12-32.
 	enums?: EnumType[];
 	types?: CustomType[];
+	// Consumed by utils/views.ts `appendViews`, called at the end of each dialect
+	// exporter (mysql/postgres/sqlite/generic.ts) to append CREATE VIEW statements.
+	views?: View[];
 	database?: string;
 }
 

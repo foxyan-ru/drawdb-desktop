@@ -5,6 +5,7 @@
 	import { selectedElement } from '$lib/stores/select';
 	import { databases } from '$lib/data/databases';
 	import TablesTab from './TablesTab.svelte';
+	import ViewsTab from './ViewsTab.svelte';
 	import RelationshipsTab from './RelationshipsTab.svelte';
 	import AreasTab from './AreasTab.svelte';
 	import NotesTab from './NotesTab.svelte';
@@ -37,6 +38,8 @@
 	const tabDefs = $derived.by(() => {
 		const base: { key: string; label: string }[] = [
 			{ key: Tab.TABLES, label: $_('tables') },
+			// Web puts Views right after Tables (EditorSidePanel/SidePanel.jsx:44-89).
+			{ key: Tab.VIEWS, label: $_('views') },
 			{ key: Tab.RELATIONSHIPS, label: $_('relationships') },
 			{ key: Tab.AREAS, label: $_('areas') },
 			{ key: Tab.NOTES, label: $_('notes') }
@@ -72,6 +75,8 @@
 	<div class="flex-1 overflow-y-auto">
 		{#if currentTab === Tab.TABLES}
 			<TablesTab />
+		{:else if currentTab === Tab.VIEWS}
+			<ViewsTab />
 		{:else if currentTab === Tab.RELATIONSHIPS}
 			<RelationshipsTab />
 		{:else if currentTab === Tab.AREAS}

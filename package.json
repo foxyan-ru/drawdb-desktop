@@ -22,6 +22,7 @@
     "@tauri-apps/plugin-os": "^2.2.0",
     "@dagrejs/dagre": "^3.1.1",
     "nanoid": "^5.1.16",
+    "node-sql-parser": "^5.4.0",
     "svelte-i18n": "^4.0.1",
     "html-to-image": "^1.11.11",
     "jspdf": "^2.5.2"

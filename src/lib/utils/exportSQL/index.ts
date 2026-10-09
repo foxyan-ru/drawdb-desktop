@@ -30,5 +30,16 @@ export function generateSQL(database: string, diagram: Diagram): string {
 export { exportMySQL } from './mysql';
 export { exportPostgres } from './postgres';
 export { exportSQLite } from './sqlite';
-export { exportGenericSQL } from './generic';
+export {
+	exportGenericSQL,
+	exportGenericToMySQL,
+	exportGenericToPostgres,
+	exportGenericToSQLite,
+	exportGenericToMariaDB,
+	exportGenericToMSSQL,
+	exportGenericToOracle,
+	transpileGeneric,
+	GENERIC_EXPORT_TARGETS,
+	type GenericExportTarget
+} from './generic';
 export type { Diagram } from './shared';

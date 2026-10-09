@@ -8,6 +8,7 @@ import {
 	getFkColumnNames,
 	type Diagram
 } from './shared';
+import { appendViews } from '../views';
 
 /**
  * Format a MySQL type string, including size, ENUM/SET values, etc.
@@ -130,5 +131,7 @@ export function exportMySQL(diagram: Diagram): string {
 		.filter(Boolean)
 		.join('\n');
 
-	return [tableStatements.trim(), fkStatements.trim()].filter(Boolean).join('\n\n') + '\n';
+	const sql = [tableStatements.trim(), fkStatements.trim()].filter(Boolean).join('\n\n') + '\n';
+	// Web utils/views.js:268-273 appends CREATE VIEW statements after the tables/FKs.
+	return appendViews(sql, diagram, DB.MYSQL);
 }

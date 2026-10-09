@@ -267,10 +267,10 @@ export const connectionStatus = writable<Record<string, ConnectionStatus>>({});
 export const activeConnectionCount = derived(activeConnections, ($a) => Object.keys($a).length);
 
 function setStatus(id: string, patch: Partial<ConnectionStatus>) {
-	connectionStatus.update((m) => ({
-		...m,
-		[id]: { busy: null, error: null, ...m[id], ...patch }
-	}));
+	connectionStatus.update((m) => {
+		const prev = m[id] ?? { busy: null, error: null };
+		return { ...m, [id]: { ...prev, ...patch } };
+	});
 }
 
 // ---------------------------------------------------------------------------

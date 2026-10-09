@@ -2,6 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import {
 	generateSQL,
 	exportGenericSQL,
+	exportGenericToMySQL,
+	exportGenericToPostgres,
+	exportGenericToSQLite,
+	exportGenericToMariaDB,
+	exportGenericToMSSQL,
+	exportGenericToOracle,
+	transpileGeneric,
 	exportMySQL,
 	exportPostgres,
 	exportSQLite,
@@ -210,11 +217,15 @@ describe('SQLite export', () => {
 	const sql = exportSQLite(fixture('INTEGER'));
 
 	test('emits PK and unique constraints without AUTO_INCREMENT', () => {
+		// VARCHAR is one of SQLite's own 11 diagram types (web datatypes.js's
+		// sqliteTypesBase), so it's emitted verbatim rather than collapsed to
+		// TEXT — and, matching web's sqlite.js, SQLite column defs never carry
+		// a size suffix.
 		expect(sql).toContain(
 			'CREATE TABLE IF NOT EXISTS "users" (\n' +
 				'\t"id" INTEGER NOT NULL,\n' +
-				'\t"email" TEXT NOT NULL UNIQUE,\n' +
-				'\t"name" TEXT,\n' +
+				'\t"email" VARCHAR NOT NULL UNIQUE,\n' +
+				'\t"name" VARCHAR,\n' +
 				'\tPRIMARY KEY("id"),\n' +
 				'\tCONSTRAINT "uq_users_email_name" UNIQUE ("email", "name")\n' +
 				');'
@@ -302,6 +313,94 @@ describe('composite foreign keys', () => {
 
 	test('SQLite inlines every column pair', () => {
 		expect(exportSQLite(diagram)).toContain('FOREIGN KEY ("a", "b") REFERENCES "parent"("x", "y")');
+	});
+});
+
+describe('Generic → dialect transpilers (exportSQL/generic.ts jsonToX port)', () => {
+	const d = fixture('INT');
+
+	test('exportGenericToMySQL: backtick-quoted, AUTO_INCREMENT for incremented PK', () => {
+		const out = exportGenericToMySQL(d);
+		expect(out).toContain('CREATE TABLE IF NOT EXISTS `users` (');
+		expect(out).toContain('`id` INT NOT NULL AUTO_INCREMENT');
+		expect(out).toContain('`email` VARCHAR(255) NOT NULL UNIQUE');
+		expect(out).toContain('PRIMARY KEY(`id`)');
+		expect(out).toContain(
+			'ALTER TABLE `posts`\nADD FOREIGN KEY(`user_id`) REFERENCES `users`(`id`)\nON UPDATE NO ACTION ON DELETE CASCADE;'
+		);
+	});
+
+	test('exportGenericToMariaDB: same family as MySQL but CREATE OR REPLACE TABLE', () => {
+		const out = exportGenericToMariaDB(d);
+		expect(out).toContain('CREATE OR REPLACE TABLE `users` (');
+		expect(out).toContain('`id` INT NOT NULL AUTO_INCREMENT');
+	});
+
+	test('exportGenericToPostgres: incremented INT becomes serial, double-quoted identifiers', () => {
+		const out = exportGenericToPostgres(d);
+		expect(out).toContain('CREATE TABLE IF NOT EXISTS "users" (');
+		expect(out).toContain('"id" serial');
+		// Postgres lowercases the native type name (unlike MySQL/MSSQL/Oracle).
+		expect(out).toContain('"email" varchar(255) NOT NULL UNIQUE');
+		expect(out).toContain(
+			'ALTER TABLE "posts"\nADD FOREIGN KEY("user_id") REFERENCES "users"("id")\nON UPDATE NO ACTION ON DELETE CASCADE;'
+		);
+	});
+
+	test('exportGenericToSQLite: storage-class affinity types, inline foreign key', () => {
+		const out = exportGenericToSQLite(d);
+		expect(out).toContain('CREATE TABLE IF NOT EXISTS "users" (');
+		expect(out).toContain('"id" INTEGER NOT NULL');
+		expect(out).toContain('"email" TEXT NOT NULL UNIQUE');
+		expect(out).toContain('FOREIGN KEY ("user_id") REFERENCES "users"("id")');
+		expect(out).not.toContain('ALTER TABLE');
+	});
+
+	test('exportGenericToMSSQL: bracket-quoted identifiers, IDENTITY for incremented PK', () => {
+		const out = exportGenericToMSSQL(d);
+		expect(out).toContain('CREATE TABLE [users] (');
+		expect(out).toContain('[id] INT NOT NULL IDENTITY');
+		expect(out).toContain('[email] NVARCHAR(255) NOT NULL UNIQUE');
+		expect(out).toContain(
+			'ALTER TABLE [posts]\nADD FOREIGN KEY([user_id]) REFERENCES [users]([id])\nON UPDATE NO ACTION ON DELETE CASCADE;\nGO'
+		);
+	});
+
+	test('exportGenericToOracle: quoted identifiers, GENERATED ALWAYS AS IDENTITY for incremented PK', () => {
+		const out = exportGenericToOracle(d);
+		expect(out).toContain('CREATE TABLE "users" (');
+		expect(out).toContain('"id" INT GENERATED ALWAYS AS IDENTITY NOT NULL');
+		// VARCHAR maps to Oracle's native VARCHAR2.
+		expect(out).toContain('"email" VARCHAR2(255) NOT NULL UNIQUE');
+	});
+
+	test('ENUM fields get a per-field domain/type name unique to each dialect', () => {
+		const enumDiagram: Diagram = {
+			tables: [
+				table({
+					id: 't',
+					name: 'person',
+					fields: [field({ id: 'f', name: 'mood', type: 'ENUM', values: ['happy', 'sad'] })]
+				})
+			],
+			relationships: []
+		};
+		expect(exportGenericToMySQL(enumDiagram)).toContain("`mood` ENUM('happy', 'sad')");
+		expect(exportGenericToPostgres(enumDiagram)).toContain('CREATE TYPE "mood_t" AS ENUM (');
+		expect(exportGenericToPostgres(enumDiagram)).toContain('"mood" "mood_t"');
+		expect(exportGenericToSQLite(enumDiagram)).toContain(`"mood" TEXT CHECK("mood" in ('happy', 'sad'))`);
+		expect(exportGenericToMSSQL(enumDiagram)).toContain('[mood] NVARCHAR(255) CHECK([mood] in');
+		expect(exportGenericToOracle(enumDiagram)).toContain('CREATE DOMAIN "mood_t" AS ENUM');
+	});
+
+	test('transpileGeneric dispatches to the matching jsonToX exporter, falling back to plain Generic SQL', () => {
+		expect(transpileGeneric(DB.MYSQL, d)).toBe(exportGenericToMySQL(d));
+		expect(transpileGeneric(DB.MARIADB, d)).toBe(exportGenericToMariaDB(d));
+		expect(transpileGeneric(DB.POSTGRES, d)).toBe(exportGenericToPostgres(d));
+		expect(transpileGeneric(DB.SQLITE, d)).toBe(exportGenericToSQLite(d));
+		expect(transpileGeneric(DB.MSSQL, d)).toBe(exportGenericToMSSQL(d));
+		expect(transpileGeneric(DB.ORACLESQL, d)).toBe(exportGenericToOracle(d));
+		expect(transpileGeneric(DB.GENERIC, d)).toBe(exportGenericSQL(d));
 	});
 });
 

@@ -9,6 +9,7 @@ import {
 	getFkColumnNames,
 	type Diagram
 } from './shared';
+import { appendViews } from '../views';
 
 // Optional keys present on diagrams imported from drawdb.app JSON that the
 // desktop `Field`/`Table` types don't declare yet (drawdb-main postgres.js:36-39,48).
@@ -220,10 +221,11 @@ export function exportPostgres(diagram: Diagram): string {
 		.filter(Boolean)
 		.join('\n');
 
-	return (
+	const sql =
 		[enumStatements, typeStatements, tableStatements, fkStatements]
 			.map((s) => s.trim())
 			.filter(Boolean)
-			.join('\n\n') + '\n'
-	);
+			.join('\n\n') + '\n';
+	// Web utils/views.js:268-273 appends CREATE [MATERIALIZED] VIEW statements last.
+	return appendViews(sql, diagram, DB.POSTGRES);
 }

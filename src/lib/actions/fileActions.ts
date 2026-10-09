@@ -8,14 +8,15 @@ import {
 	exportDiagram,
 	tables,
 	relationships,
+	database,
 	undo,
 	redo
 } from '$lib/stores/diagram';
 import { saveState, currentDiagramName, currentDiagramPath } from '$lib/stores/saveState';
 import { clearHistory } from '$lib/stores/undoRedo';
-import { openModal } from '$lib/stores/modal';
+import { openPickDatabase } from '$lib/stores/modal';
 import { addRecentFile } from '$lib/stores/recentFiles';
-import { MODAL, State } from '$lib/data/constants';
+import { DB, State, type DBType } from '$lib/data/constants';
 
 /**
  * Shared file/diagram actions used by both the in-app header (ControlPanel.svelte)
@@ -59,17 +60,31 @@ async function reportLoadError(err: unknown) {
 	}
 }
 
+/**
+ * "New" opens the pick-database dialog (PickDatabaseModal.svelte) instead of
+ * silently creating a Generic diagram — web picks the engine once for a blank
+ * diagram (Workspace.jsx:615-663) so new tables get that engine's type defaults.
+ * The dialog itself shows the discard-unsaved-changes warning when the current
+ * diagram is non-empty, and Cancel there leaves the current diagram untouched.
+ */
 export async function handleNew() {
-	const $tables = get(tables);
-	const $rels = get(relationships);
-	if ($tables.length > 0 || $rels.length > 0) {
-		openModal(MODAL.NEW);
-	} else {
-		resetDiagram();
-		currentDiagramName.set(translate('untitled'));
-		currentDiagramPath.set(null);
-		saveState.set(State.NONE);
-	}
+	openPickDatabase();
+}
+
+/** Whether the current diagram has content that "New" would discard. */
+export function hasDiagramContent(): boolean {
+	return get(tables).length > 0 || get(relationships).length > 0;
+}
+
+/** Replaces the current document with a blank, unsaved diagram for `db`. */
+export function createNewDiagram(db: DBType = DB.GENERIC) {
+	resetDiagram();
+	// Set after the reset (which restores Generic) and before any table exists,
+	// so addTable's engine-dependent defaults apply from the first table.
+	database.set(db);
+	currentDiagramName.set(translate('untitled'));
+	currentDiagramPath.set(null);
+	saveState.set(State.NONE);
 }
 
 export async function handleSave() {
