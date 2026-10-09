@@ -1,18 +1,27 @@
-import type { Field, Table } from '$lib/data/constants';
+import { DB, type Field, type Table } from '../../data/constants';
 import {
 	escapeQuotes,
 	exportFieldComment,
+	getTypeInfo,
 	parseDefault,
+	shouldEmitCheck,
 	uniqueConstraintClause,
 	getInlineForeignKeys,
 	type Diagram
 } from './shared';
 
 /**
- * Map a generic field type to a SQLite type.
- * SQLite has a simplified type system: INTEGER, REAL, TEXT, BLOB.
+ * Map a field type to a SQLite type.
+ * Types from the SQLite diagram type list (INTEGER, TEXT, BOOLEAN, DATETIME, …)
+ * are emitted verbatim like the web original
+ * (drawdb-main/src/utils/exportSQL/sqlite.js:22); types carried over from other
+ * dialects collapse to SQLite's storage classes: INTEGER, REAL, TEXT, BLOB.
  */
 function sqliteType(field: Field): string {
+	if (getTypeInfo(DB.SQLITE, field.type)) {
+		return field.type;
+	}
+
 	switch (field.type.toUpperCase()) {
 		case 'INT':
 		case 'INTEGER':
@@ -71,12 +80,12 @@ function formatField(field: Field): string {
 		def += ' UNIQUE';
 	}
 
-	const defaultVal = parseDefault(field);
+	const defaultVal = parseDefault(field, DB.SQLITE);
 	if (field.default !== '' && field.default !== undefined && field.default !== null) {
 		def += ` DEFAULT ${defaultVal}`;
 	}
 
-	if (!isEnumType && field.check && field.check !== '') {
+	if (!isEnumType && shouldEmitCheck(field, DB.SQLITE)) {
 		def += ` CHECK(${field.check})`;
 	}
 

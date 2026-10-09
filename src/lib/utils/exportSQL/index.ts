@@ -1,4 +1,4 @@
-import { DB } from '$lib/data/constants';
+import { DB } from '../../data/constants';
 import { exportMySQL } from './mysql';
 import { exportPostgres } from './postgres';
 import { exportSQLite } from './sqlite';

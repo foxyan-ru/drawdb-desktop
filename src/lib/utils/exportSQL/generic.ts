@@ -1,7 +1,9 @@
-import type { Field, Table } from '$lib/data/constants';
+import { DB, type Field, type Table } from '../../data/constants';
 import {
 	exportFieldComment,
+	getTypeInfo,
 	parseDefault,
+	shouldEmitCheck,
 	uniqueConstraintClause,
 	getFkColumnNames,
 	type Diagram
@@ -9,10 +11,13 @@ import {
 
 /**
  * Format a generic type string. No database-specific transformations.
- * Includes size in parentheses if provided.
+ * Includes size in parentheses if provided and the type is sized/precision
+ * (or not in the Generic type list, e.g. when used as the MSSQL/Oracle fallback).
  */
 function genericType(field: Field): string {
-	if (field.size !== undefined && field.size !== '' && field.size !== null) {
+	const info = getTypeInfo(DB.GENERIC, field.type);
+	const sizable = info ? info.isSized || info.hasPrecision : true;
+	if (sizable && field.size !== undefined && field.size !== '' && field.size !== null) {
 		return `${field.type}(${field.size})`;
 	}
 	return field.type;
@@ -34,12 +39,12 @@ function formatField(field: Field): string {
 		def += ' UNIQUE';
 	}
 
-	const defaultVal = parseDefault(field);
+	const defaultVal = parseDefault(field, DB.GENERIC);
 	if (field.default !== '' && field.default !== undefined && field.default !== null) {
 		def += ` DEFAULT ${defaultVal}`;
 	}
 
-	if (field.check && field.check !== '') {
+	if (shouldEmitCheck(field, DB.GENERIC)) {
 		def += ` CHECK(${field.check})`;
 	}
 
