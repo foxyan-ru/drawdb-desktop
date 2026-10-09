@@ -18,6 +18,8 @@
     addRelationship,
     exportDiagram
   } from '$lib/stores/diagram';
+  import { views, updateView } from '$lib/stores/views';
+  import { getViewWidth, getViewHeight, resolveViewColumns, clampViewWidth } from '$lib/utils/views';
   import { snapshotForUndo } from '$lib/stores/undoRedo';
   import { connecting } from '$lib/stores/connect';
   import { settings } from '$lib/stores/settings';
@@ -46,12 +48,14 @@
     type Relationship as RelationshipType,
     type Table as TableType,
     type Area as AreaType,
-    type Note as NoteType
+    type Note as NoteType,
+    type View as ViewType
   } from '$lib/data/constants';
   import Table from './Table.svelte';
   import Relationship from './Relationship.svelte';
   import Area from './Area.svelte';
   import Note from './Note.svelte';
+  import View from './View.svelte';
 
   let svgEl: SVGSVGElement | undefined = $state(undefined);
   let containerEl: HTMLDivElement | undefined = $state(undefined);
@@ -89,6 +93,11 @@
   // Area resize state
   let areaResize = $state<{ id: number; dir: string }>({ id: -1, dir: 'none' });
   let areaInitDims = $state({ x: 0, y: 0, width: 0, height: 0 });
+
+  // View resize state: width-only, via the left/right edge handles in View.svelte
+  // (height is derived from the view's resolved column count, not resizable).
+  let viewResize = $state<{ id: string; dir: 'l' | 'r' | 'none' }>({ id: '', dir: 'none' });
+  let viewInitDims = $state({ x: 0, width: 0 });
 
   // Current pointer in diagram space
   let pointerDiagram = $state({ x: 0, y: 0 });
@@ -221,6 +230,10 @@
       const n = get(notes).find((n) => n.id === id);
       return n ? { x: n.x, y: n.y } : null;
     }
+    if (type === ObjectType.VIEW) {
+      const v = get(views).find((v) => v.id === id);
+      return v ? { x: v.x, y: v.y } : null;
+    }
     return null;
   }
 
@@ -228,6 +241,7 @@
     if (type === ObjectType.TABLE) return !!get(tables).find((t) => t.id === id)?.locked;
     if (type === ObjectType.AREA) return !!get(areas).find((a) => a.id === id)?.locked;
     if (type === ObjectType.NOTE) return !!get(notes).find((n) => n.id === id)?.locked;
+    if (type === ObjectType.VIEW) return !!get(views).find((v) => v.id === id)?.locked;
     return false;
   }
 
@@ -253,6 +267,13 @@
     if (type === ObjectType.NOTE) {
       const n = $notes.find((n) => n.id === id);
       return n ? { x: n.x, y: n.y, width: n.width || noteWidth, height: n.height } : null;
+    }
+    if (type === ObjectType.VIEW) {
+      const v = $views.find((v) => v.id === id);
+      if (!v) return null;
+      const width = getViewWidth(v);
+      const height = getViewHeight(v, resolveViewColumns(v, $tables).length, $settings.showComments);
+      return { x: v.x, y: v.y, width, height };
     }
     return null;
   }
@@ -282,6 +303,7 @@
     $tables.forEach((t) => consider(ObjectType.TABLE, t));
     $areas.forEach((a) => consider(ObjectType.AREA, a));
     $notes.forEach((n) => consider(ObjectType.NOTE, n));
+    $views.forEach((v) => consider(ObjectType.VIEW, v));
 
     bulkSelectedElements.set(additive ? [...existing, ...picked] : picked);
   }
@@ -306,7 +328,9 @@
             ? 'Move table'
             : dragging.type === ObjectType.AREA
               ? 'Move area'
-              : 'Move note';
+              : dragging.type === ObjectType.VIEW
+                ? 'Move view'
+                : 'Move note';
       snapshotForUndo(label, exportDiagram());
       dragSnapshotTaken = true;
     }
@@ -339,6 +363,14 @@
         prev.map((n) => {
           const p = posOf(ObjectType.NOTE, n.id);
           return p ? { ...n, x: p.x, y: p.y } : n;
+        })
+      );
+    }
+    if (moved.some((el) => el.type === ObjectType.VIEW)) {
+      views.update((prev) =>
+        prev.map((v) => {
+          const p = posOf(ObjectType.VIEW, v.id);
+          return p ? { ...v, x: p.x, y: p.y } : v;
         })
       );
     }
@@ -434,6 +466,19 @@
       return;
     }
 
+    // Handle view resize (width only; left edge keeps the right edge fixed).
+    if (viewResize.id !== '' && viewResize.dir !== 'none') {
+      const { x } = snapToGrid(diagPt);
+      if (viewResize.dir === 'r') {
+        updateView(viewResize.id, { width: clampViewWidth(x - viewInitDims.x) });
+      } else {
+        const rightEdge = viewInitDims.x + viewInitDims.width;
+        const width = clampViewWidth(rightEdge - x);
+        updateView(viewResize.id, { width, x: rightEdge - width });
+      }
+      return;
+    }
+
     if (bulkSelectRect.show) {
       bulkSelectRect = { ...bulkSelectRect, x2: diagPt.x, y2: diagPt.y };
     }
@@ -461,6 +506,7 @@
 
     dragging = { id: -1, type: ObjectType.NONE, grabOffset: { x: 0, y: 0 } };
     areaResize = { id: -1, dir: 'none' };
+    viewResize = { id: '', dir: 'none' };
   }
 
   function finishConnect(e: PointerEvent) {
@@ -627,6 +673,11 @@
     };
   }
 
+  function handleViewResizeStart(viewId: string, dir: 'l' | 'r', view: ViewType) {
+    viewResize = { id: viewId, dir };
+    viewInitDims = { x: view.x, width: getViewWidth(view) };
+  }
+
 </script>
 
 <div
@@ -700,6 +751,16 @@
         {table}
         onDragStart={(e) =>
           handleElementDragStart(table.id, ObjectType.TABLE, table.x, table.y, e, table.locked)}
+      />
+    {/each}
+
+    <!-- Views rendered on top of tables (web Canvas.jsx render order: … tables → views → notes) -->
+    {#each $views as v (v.id)}
+      <View
+        view={v}
+        tables={$tables}
+        onDragStart={(e) => handleElementDragStart(v.id, ObjectType.VIEW, v.x, v.y, e, v.locked)}
+        onResizeStart={(dir) => handleViewResizeStart(v.id, dir, v)}
       />
     {/each}
 

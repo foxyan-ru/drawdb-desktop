@@ -9,6 +9,7 @@ import {
 	getInlineForeignKeys,
 	type Diagram
 } from './shared';
+import { appendViews } from '../views';
 
 /**
  * Map a field type to a SQLite type.
@@ -135,5 +136,7 @@ function formatTable(table: Table, diagram: Diagram): string {
  * Foreign keys are defined inline within each CREATE TABLE statement.
  */
 export function exportSQLite(diagram: Diagram): string {
-	return diagram.tables.map((t) => formatTable(t, diagram)).join('\n');
+	const sql = diagram.tables.map((t) => formatTable(t, diagram)).join('\n');
+	// Web utils/views.js:268-273 appends CREATE VIEW statements after the tables.
+	return appendViews(sql, diagram, DB.SQLITE);
 }

@@ -33,7 +33,8 @@ export const Tab = {
 	AREAS: '3',
 	NOTES: '4',
 	TYPES: '5',
-	ENUMS: '6'
+	ENUMS: '6',
+	VIEWS: '7'
 } as const;
 
 export const ObjectType = {
@@ -43,7 +44,9 @@ export const ObjectType = {
 	NOTE: 3,
 	RELATIONSHIP: 4,
 	TYPE: 5,
-	ENUM: 6
+	ENUM: 6,
+	// 7 is web's DBML (drawdb-main/src/data/constants.js:64); keep VIEW at web's value.
+	VIEW: 8
 } as const;
 
 export const Action = {
@@ -177,4 +180,63 @@ export interface CustomType {
 	name: string;
 	fields: Field[];
 	comment: string;
+}
+
+// --- Views (web drawdb-main/src/context/ViewsContext.jsx:20-40, utils/views.js) ---
+
+export type JoinTypeValue = 'INNER' | 'LEFT' | 'RIGHT' | 'FULL';
+
+/**
+ * ON clause of a join: `leftTable.leftField = joinedTable.rightField`. The left
+ * side is the base table or an earlier join. Fields are filled one at a time in
+ * the side panel, so they may be missing while the join is being edited.
+ */
+export interface JoinOn {
+	leftTableId?: string | null;
+	leftFieldId?: string | null;
+	rightFieldId?: string | null;
+}
+
+export interface Join {
+	id: string;
+	type: JoinTypeValue;
+	tableId: string | null;
+	on: JoinOn | null;
+}
+
+/** One SELECT-list entry; `alias` blank → the field's own name. */
+export interface ViewColumn {
+	id: string;
+	tableId: string | null;
+	fieldId: string | null;
+	alias: string;
+}
+
+/** One WHERE term; `connector` joins it to the previous term (ignored on the first). */
+export interface Condition {
+	id: string;
+	connector: 'AND' | 'OR';
+	tableId: string | null;
+	fieldId: string | null;
+	/** One of `ConditionOperator` in utils/views.ts. */
+	operator: string;
+	value: string;
+}
+
+export interface View {
+	id: string;
+	name: string;
+	x: number;
+	y: number;
+	/** Resized width; absent → default table width. */
+	width?: number;
+	baseTableId: string | null;
+	joins: Join[];
+	columns: ViewColumn[];
+	conditions: Condition[];
+	comment: string;
+	/** Only emitted on engines with materialized views (PostgreSQL, Oracle, Generic). */
+	materialized: boolean;
+	color: string;
+	locked: boolean;
 }

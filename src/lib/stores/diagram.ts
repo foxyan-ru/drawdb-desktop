@@ -1,5 +1,7 @@
 import { writable, get, derived } from 'svelte/store';
 import { nanoid } from 'nanoid';
+// Relative (not `$lib`) so `bun test` can load this module (stores/views.test.ts) without
+// SvelteKit's alias map — same convention as select.ts / clipboard.ts.
 import {
 	DB,
 	defaultBlue,
@@ -13,7 +15,7 @@ import {
 	type EnumType,
 	type CustomType,
 	type DBType
-} from '$lib/data/constants';
+} from '../data/constants';
 import { undoStack, redoStack, snapshotForUndo, resetCoalescing, clearHistory } from './undoRedo';
 import { selectedElement, clearSelection } from './select';
 import { transform } from './transform';
@@ -23,7 +25,8 @@ import {
 	prepareForPaste,
 	serializeClipboardElement,
 	type ClipboardElement
-} from '$lib/utils/clipboard';
+} from '../utils/clipboard';
+import { views } from './views';
 
 export const database = writable<DBType>(DB.GENERIC);
 export const tables = writable<Table[]>([]);
@@ -322,6 +325,7 @@ export function loadDiagram(data: any) {
 	notes.set(data.notes || []);
 	enums.set(data.enums || []);
 	types.set(data.types || []);
+	views.set(data.views || []);
 	database.set(data.database || DB.GENERIC);
 	clearSelection();
 }
@@ -339,6 +343,8 @@ export function exportDiagram() {
 		notes: get(notes),
 		enums: get(enums),
 		types: get(types),
+		// Web key (ControlPanel.jsx:1066); views live in their own store (./views).
+		views: get(views),
 		database: get(database)
 	};
 }
@@ -350,6 +356,7 @@ export function resetDiagram() {
 	notes.set([]);
 	enums.set([]);
 	types.set([]);
+	views.set([]);
 	database.set(DB.GENERIC);
 	clearSelection();
 	clearHistory();
