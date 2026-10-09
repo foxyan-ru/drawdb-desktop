@@ -12,6 +12,8 @@
 //! `information_schema`); partition children are skipped.
 
 use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 
 use sqlx::postgres::{PgConnectOptions, PgPool};
 use sqlx::{ConnectOptions, Row};
@@ -46,7 +48,21 @@ fn e(err: sqlx::Error) -> String {
 
 const SCHEMA_FILTER: &str = "n.nspname <> 'information_schema' AND left(n.nspname, 3) <> 'pg_'";
 
-pub(crate) async fn introspect(pool: &PgPool) -> Result<(Option<String>, Vec<TableInfo>), String> {
+/// Returns a boxed future (rather than being an `async fn`) so the
+/// `&mut PgConnection` executor borrow used below for the read-only
+/// transaction stays a concrete, already-resolved type. Left as a bare
+/// `async fn`, rustc's region inference ties that borrow's lifetime into
+/// this function's generated Future type, which then fails to satisfy the
+/// higher-ranked `Send`/`Executor` bound `tauri::generate_handler!` needs
+/// ("implementation of `Executor`/`Send` is not general enough") — a known
+/// async-fn/HRTB limitation, not an app bug.
+pub(crate) fn introspect(
+    pool: &PgPool
+) -> Pin<Box<dyn Future<Output = Result<(Option<String>, Vec<TableInfo>), String>> + Send + '_>> {
+    Box::pin(introspect_inner(pool))
+}
+
+async fn introspect_inner(pool: &PgPool) -> Result<(Option<String>, Vec<TableInfo>), String> {
     let mut tx = pool.begin().await.map_err(e)?;
     sqlx::raw_sql("SET TRANSACTION READ ONLY")
         .execute(&mut *tx)
