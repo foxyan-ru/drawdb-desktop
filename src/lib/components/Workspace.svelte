@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ControlPanel from './Header/ControlPanel.svelte';
 	import Modal from './Header/Modal.svelte';
+	import PickDatabaseModal from './Header/PickDatabaseModal.svelte';
 	import FloatingControls from './FloatingControls.svelte';
 	import SidePanel from './SidePanel/SidePanel.svelte';
 	import Canvas from './Canvas/Canvas.svelte';
@@ -8,7 +9,7 @@
 	import { get } from 'svelte/store';
 	import { _ } from 'svelte-i18n';
 	import { layout } from '$lib/stores/layout';
-	import { currentModal, connectionManagerOpen } from '$lib/stores/modal';
+	import { currentModal, connectionManagerOpen, pickDatabaseOpen } from '$lib/stores/modal';
 	import { selectedElement } from '$lib/stores/select';
 	import { settings } from '$lib/stores/settings';
 	import { transform, setTransform, screenSize } from '$lib/stores/transform';
@@ -144,7 +145,7 @@
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.defaultPrevented || e.isComposing) return;
 		if (isEditableTarget(e.target)) return;
-		if (get(currentModal) !== MODAL.NONE || get(connectionManagerOpen)) return;
+		if (get(currentModal) !== MODAL.NONE || get(connectionManagerOpen) || get(pickDatabaseOpen)) return;
 
 		const action = matchShortcut(e, isMac);
 		if (!action) return;
@@ -193,6 +194,9 @@
 
 	<!-- Modal -->
 	<Modal bind:modal={$currentModal} />
+
+	<!-- Mounted here (not in ControlPanel) so File ▸ New from the native menu works with the header hidden. -->
+	<PickDatabaseModal />
 
 	<!-- Toast notifications (stores/toast.ts → showToast) -->
 	<Toast />
