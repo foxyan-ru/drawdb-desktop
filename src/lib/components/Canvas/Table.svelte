@@ -11,6 +11,7 @@
     type Table,
     type Field
   } from '$lib/data/constants';
+  import { getVisibleFields } from '$lib/utils/calcPath';
 
   let { table, onDragStart }: { table: Table; onDragStart: (e: PointerEvent) => void } =
     $props();
@@ -23,17 +24,10 @@
     ($selectedElement.id === table.id && $selectedElement.element === ObjectType.TABLE)
   );
 
-  let visibleFields = $derived(
-    table.collapsed ? table.fields.filter((f) => isFieldLinked(f)) : table.fields
-  );
-
-  function isFieldLinked(field: Field): boolean {
-    return $relationships.some(
-      (r) =>
-        (r.startTableId === table.id && r.startFieldId === field.id) ||
-        (r.endTableId === table.id && r.endFieldId === field.id)
-    );
-  }
+  // Collapsed-aware: counts every column of a composite FK, not just a
+  // relationship's main field pair, so this matches what Relationship.svelte
+  // anchors its lines to (calcPath.ts getVisibleFields/getVisibleFieldIndex).
+  let visibleFields = $derived(getVisibleFields(table, $relationships));
 
   let tableHeight = $derived(
     tableColorStripHeight + tableHeaderHeight + visibleFields.length * tableFieldHeight

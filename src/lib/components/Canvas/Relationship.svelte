@@ -1,17 +1,19 @@
 <script lang="ts">
-  import { tables } from '$lib/stores/diagram';
+  import { tables, relationships } from '$lib/stores/diagram';
   import { settings } from '$lib/stores/settings';
   import { selectedElement } from '$lib/stores/select';
   import {
-    tableHeaderHeight,
-    tableFieldHeight,
-    tableColorStripHeight,
+    calcPath,
+    calcCompositePath,
+    getRelationshipFieldPairs,
+    getVisibleFieldIndex
+  } from '$lib/utils/calcPath';
+  import {
     defaultRelationshipColor,
     Cardinality,
     ObjectType,
     Tab,
-    type Relationship,
-    type Table
+    type Relationship
   } from '$lib/data/constants';
 
   let { relationship }: { relationship: Relationship } = $props();
@@ -25,78 +27,34 @@
   let endTable = $derived($tables.find((t) => t.id === relationship.endTableId));
 
   /**
-   * Get field index within visible fields list.
+   * Geometry inputs, ported from web Relationship.jsx:24-68: field indices are
+   * taken over the *visible* rows (a collapsed table renders only its linked
+   * fields — see Table.svelte), not the raw `fields` array.
+   * TODO(hidden tables): web also returns null when either table is `hidden`;
+   * desktop's Table type has no `hidden` flag yet (tracked in a later batch).
    */
-  function getFieldIndex(table: Table | undefined, fieldId: string): number {
-    if (!table) return 0;
-    const idx = table.fields.findIndex((f) => f.id === fieldId);
-    return idx >= 0 ? idx : 0;
-  }
-
-  let startFieldIndex = $derived(getFieldIndex(startTable, relationship.startFieldId));
-  let endFieldIndex = $derived(getFieldIndex(endTable, relationship.endFieldId));
-
-  /**
-   * Calculate the path between two table fields.
-   * Uses the same logic as the original calcPath:
-   * - Determine y positions based on field index
-   * - Determine whether to exit left or right of each table
-   * - Draw cubic bezier with rounded corners
-   */
-  let pathData = $derived.by(() => {
-    if (!startTable || !endTable) return '';
-
-    const w = tableWidth;
-    const x1 = startTable.x;
-    const y1 =
-      startTable.y +
-      tableColorStripHeight +
-      tableHeaderHeight +
-      startFieldIndex * tableFieldHeight +
-      tableFieldHeight / 2;
-    const x2 = endTable.x;
-    const y2 =
-      endTable.y +
-      tableColorStripHeight +
-      tableHeaderHeight +
-      endFieldIndex * tableFieldHeight +
-      tableFieldHeight / 2;
-
-    let radius = 10;
-    const midX = (x2 + x1 + w) / 2;
-    const endX = x2 + w < x1 ? x2 + w : x2;
-
-    if (Math.abs(y1 - y2) <= 36) {
-      radius = Math.abs(y2 - y1) / 3;
-      if (radius <= 2) {
-        if (x1 + w <= x2) return `M ${x1 + w} ${y1} L ${x2} ${y2 + 0.1}`;
-        else if (x2 + w < x1)
-          return `M ${x1} ${y1} L ${x2 + w} ${y2 + 0.1}`;
-      }
-    }
-
-    if (y1 <= y2) {
-      if (x1 + w <= x2) {
-        return `M ${x1 + w} ${y1} L ${midX - radius} ${y1} A ${radius} ${radius} 0 0 1 ${midX} ${y1 + radius} L ${midX} ${y2 - radius} A ${radius} ${radius} 0 0 0 ${midX + radius} ${y2} L ${endX} ${y2}`;
-      } else if (x2 <= x1 + w && x1 <= x2) {
-        return `M ${x1 + w} ${y1} L ${x2 + w} ${y1} A ${radius} ${radius} 0 0 1 ${x2 + w + radius} ${y1 + radius} L ${x2 + w + radius} ${y2 - radius} A ${radius} ${radius} 0 0 1 ${x2 + w} ${y2} L ${x2 + w} ${y2}`;
-      } else if (x2 + w >= x1 && x2 + w <= x1 + w) {
-        return `M ${x1} ${y1} L ${x2 - radius} ${y1} A ${radius} ${radius} 0 0 0 ${x2 - radius - radius} ${y1 + radius} L ${x2 - radius - radius} ${y2 - radius} A ${radius} ${radius} 0 0 0 ${x2 - radius} ${y2} L ${x2} ${y2}`;
-      } else {
-        return `M ${x1} ${y1} L ${midX + radius} ${y1} A ${radius} ${radius} 0 0 0 ${midX} ${y1 + radius} L ${midX} ${y2 - radius} A ${radius} ${radius} 0 0 1 ${midX - radius} ${y2} L ${endX} ${y2}`;
-      }
-    } else {
-      if (x1 + w <= x2) {
-        return `M ${x1 + w} ${y1} L ${midX - radius} ${y1} A ${radius} ${radius} 0 0 0 ${midX} ${y1 - radius} L ${midX} ${y2 + radius} A ${radius} ${radius} 0 0 1 ${midX + radius} ${y2} L ${endX} ${y2}`;
-      } else if (x1 + w >= x2 && x1 + w <= x2 + w) {
-        return `M ${x1} ${y1} L ${x1 - radius - radius} ${y1} A ${radius} ${radius} 0 0 1 ${x1 - radius - radius - radius} ${y1 - radius} L ${x1 - radius - radius - radius} ${y2 + radius} A ${radius} ${radius} 0 0 1 ${x1 - radius - radius} ${y2} L ${endX} ${y2}`;
-      } else if (x1 >= x2 && x1 <= x2 + w) {
-        return `M ${x1 + w} ${y1} L ${x1 + w + radius} ${y1} A ${radius} ${radius} 0 0 0 ${x1 + w + radius + radius} ${y1 - radius} L ${x1 + w + radius + radius} ${y2 + radius} A ${radius} ${radius} 0 0 0 ${x1 + w + radius} ${y2} L ${x2 + w} ${y2}`;
-      } else {
-        return `M ${x1} ${y1} L ${midX + radius} ${y1} A ${radius} ${radius} 0 0 1 ${midX} ${y1 - radius} L ${midX} ${y2 + radius} A ${radius} ${radius} 0 0 0 ${midX - radius} ${y2} L ${endX} ${y2}`;
-      }
-    }
+  let pathValues = $derived.by(() => {
+    const st = startTable;
+    const et = endTable;
+    if (!st || !et) return null;
+    const rels = $relationships;
+    const pairs = getRelationshipFieldPairs(relationship);
+    return {
+      startTable: { x: st.x, y: st.y, width: tableWidth },
+      endTable: { x: et.x, y: et.y, width: tableWidth },
+      startFieldIndex: getVisibleFieldIndex(st, relationship.startFieldId, rels),
+      endFieldIndex: getVisibleFieldIndex(et, relationship.endFieldId, rels),
+      startFieldIndices: pairs.map((p) => getVisibleFieldIndex(st, p.startFieldId, rels)),
+      endFieldIndices: pairs.map((p) => getVisibleFieldIndex(et, p.endFieldId, rels))
+    };
   });
+
+  // Composite (multi-column) FKs draw a fork path (web Relationship.jsx:70-84).
+  let composite = $derived(
+    pathValues && pathValues.startFieldIndices.length > 1 ? calcCompositePath(pathValues) : null
+  );
+
+  let pathData = $derived(composite ? composite.path : calcPath(pathValues));
 
   let isSelected = $derived(
     $selectedElement.element === ObjectType.RELATIONSHIP &&
@@ -133,25 +91,49 @@
     }
   });
 
+  type LabelPoints = {
+    start: { x: number; y: number };
+    end: { x: number; y: number };
+    mid: { x: number; y: number };
+  };
+
   /**
-   * Get points along the path for cardinality labels.
+   * Points for the cardinality badges and name label. Measured in an $effect
+   * (after the DOM `d` attribute is updated) and keyed on `pathData`, so the
+   * labels follow the line while tables are dragged. Composite paths use the
+   * fork's own anchor points (web Relationship.jsx:126-132) — measuring a
+   * multi-subpath `d` along its length would land on arbitrary branches.
    */
-  let cardinalityPoints = $derived.by(() => {
-    if (!pathEl) return null;
+  let cardinalityPoints = $state<LabelPoints | null>(null);
+
+  $effect(() => {
+    const d = pathData;
+    const c = composite;
+    if (c) {
+      cardinalityPoints = { start: c.startCardinality, end: c.endCardinality, mid: c.labelPoint };
+      return;
+    }
+    if (!pathEl || !d) {
+      cardinalityPoints = null;
+      return;
+    }
     try {
       const pathLength = pathEl.getTotalLength();
-      if (pathLength < 60) return null;
+      if (pathLength < 60) {
+        cardinalityPoints = null;
+        return;
+      }
       const offset = 28;
       const startPt = pathEl.getPointAtLength(offset);
       const endPt = pathEl.getPointAtLength(pathLength - offset);
       const midPt = pathEl.getPointAtLength(pathLength / 2);
-      return {
+      cardinalityPoints = {
         start: { x: startPt.x, y: startPt.y },
         end: { x: endPt.x, y: endPt.y },
         mid: { x: midPt.x, y: midPt.y }
       };
     } catch {
-      return null;
+      cardinalityPoints = null;
     }
   });
 
