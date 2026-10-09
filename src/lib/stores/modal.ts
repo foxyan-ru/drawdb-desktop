@@ -26,3 +26,27 @@ export function openConnectionManager() {
 export function closeConnectionManager() {
 	connectionManagerOpen.set(false);
 }
+
+// Pick-database dialog for a new diagram (PickDatabaseModal.svelte, web
+// Workspace.jsx:615-663). Its own flag for the same reason as above.
+export const pickDatabaseOpen = writable(false);
+
+export function openPickDatabase() {
+	pickDatabaseOpen.set(true);
+}
+
+export function closePickDatabase() {
+	pickDatabaseOpen.set(false);
+}
+
+// Import-from-SQL dialog (ImportSourceModal.svelte, web MODAL.IMPORT_SRC).
+// Its own flag for the same reason as above.
+export const importSourceOpen = writable(false);
+
+export function openImportSource() {
+	importSourceOpen.set(true);
+}
+
+export function closeImportSource() {
+	importSourceOpen.set(false);
+}
