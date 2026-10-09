@@ -1,7 +1,9 @@
-import type { Field, Table, Relationship } from '$lib/data/constants';
+import { DB, type Field, type Table } from '../../data/constants';
 import {
 	escapeQuotes,
+	getTypeInfo,
 	parseDefault,
+	shouldEmitCheck,
 	uniqueConstraintClause,
 	getFkColumnNames,
 	type Diagram
@@ -9,6 +11,9 @@ import {
 
 /**
  * Format a MySQL type string, including size, ENUM/SET values, etc.
+ * Size is only appended for sized/precision types, as in
+ * drawdb-main/src/utils/exportSQL/mysql.js:12-27; types unknown to the MySQL
+ * list keep any size the user gave.
  */
 function formatType(field: Field): string {
 	let result = field.type;
@@ -18,7 +23,10 @@ function formatType(field: Field): string {
 			result += `(${field.values.map((v) => `'${escapeQuotes(String(v))}'`).join(', ')})`;
 		}
 	} else if (field.size !== undefined && field.size !== '' && field.size !== null) {
-		result += `(${field.size})`;
+		const info = getTypeInfo(DB.MYSQL, field.type);
+		if (!info || info.isSized || info.hasPrecision) {
+			result += `(${field.size})`;
+		}
 	}
 
 	return result;
@@ -30,7 +38,9 @@ function formatType(field: Field): string {
 function formatField(field: Field): string {
 	let def = `\t\`${field.name}\` ${formatType(field)}`;
 
-	if (field.unsigned) {
+	// WHY: UNSIGNED only applies to signed numeric types (drawdb-main mysql.js:37-39).
+	const info = getTypeInfo(DB.MYSQL, field.type);
+	if (field.unsigned && (!info || info.signed)) {
 		def += ' UNSIGNED';
 	}
 	if (field.notNull) {
@@ -43,12 +53,12 @@ function formatField(field: Field): string {
 		def += ' UNIQUE';
 	}
 
-	const defaultVal = parseDefault(field);
+	const defaultVal = parseDefault(field, DB.MYSQL);
 	if (field.default !== '' && field.default !== undefined && field.default !== null) {
 		def += ` DEFAULT ${defaultVal}`;
 	}
 
-	if (field.check && field.check !== '') {
+	if (shouldEmitCheck(field, DB.MYSQL)) {
 		def += ` CHECK(${field.check})`;
 	}
 

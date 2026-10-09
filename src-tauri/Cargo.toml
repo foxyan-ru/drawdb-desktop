@@ -21,6 +21,10 @@ tauri-plugin-os = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 chrono = "0.4"
+# DB client (CLAUDE.md §9). One async driver for all three engines; default
+# features off to skip compile-time macros/migrations. `sqlite` bundles
+# libsqlite3 (no system lib needed); rustls avoids an OpenSSL dependency.
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "sqlite", "postgres", "mysql"] }
 
 [profile.release]
 panic = "abort"

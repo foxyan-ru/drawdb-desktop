@@ -105,9 +105,11 @@ export interface Field {
 	size?: number | string;
 	values?: string[];
 	unsigned?: boolean;
+	isArray?: boolean;
 }
 
 export interface TableIndex {
+	id?: number;
 	name: string;
 	fields: string[];
 	unique: boolean;

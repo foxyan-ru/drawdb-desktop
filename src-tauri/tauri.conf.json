@@ -28,7 +28,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["app", "dmg", "deb", "rpm", "appimage", "nsis"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -37,26 +37,12 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "targets": ["nsis"],
       "wix": {
         "language": "en-US"
       }
     }
   },
   "plugins": {
-    "fs": {
-      "scope": {
-        "allow": [
-          { "path": "$APPDATA/**", "permission": "readwrite" },
-          { "path": "$DOCUMENT/**", "permission": "readwrite" },
-          { "path": "$HOME/**", "permission": "readwrite" },
-          { "path": "$DESKTOP/**", "permission": "readwrite" }
-        ]
-      }
-    },
-    "dialog": {
-      "all": true
-    },
     "shell": {
       "open": true
     }

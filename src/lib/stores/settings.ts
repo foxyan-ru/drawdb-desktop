@@ -16,6 +16,12 @@ export interface Settings {
 	showComments: boolean;
 }
 
+/** Syncs the `.dark` class on <html> that Tailwind's `dark:` variant keys off (see app.css). */
+function applyThemeClass(mode: Settings['mode']) {
+	if (typeof document === 'undefined') return;
+	document.documentElement.classList.toggle('dark', mode === 'dark');
+}
+
 const defaultSettings: Settings = {
 	strictMode: false,
 	showFieldSummary: true,
@@ -42,6 +48,10 @@ function createSettingsStore() {
 		}
 	}
 
+	// WHY: apply the persisted theme immediately at startup, not only on the next change,
+	// so `dark:` utilities match the saved mode from first paint.
+	applyThemeClass(initial.mode);
+
 	const { subscribe, set, update } = writable<Settings>(initial);
 
 	return {
@@ -51,7 +61,7 @@ function createSettingsStore() {
 			if (typeof localStorage !== 'undefined') {
 				localStorage.setItem('drawdb_settings', JSON.stringify(value));
 			}
-			document.documentElement.classList.toggle('dark', value.mode === 'dark');
+			applyThemeClass(value.mode);
 		},
 		update(fn: (s: Settings) => Settings) {
 			update((prev) => {
@@ -59,7 +69,7 @@ function createSettingsStore() {
 				if (typeof localStorage !== 'undefined') {
 					localStorage.setItem('drawdb_settings', JSON.stringify(next));
 				}
-				document.documentElement.classList.toggle('dark', next.mode === 'dark');
+				applyThemeClass(next.mode);
 				return next;
 			});
 		}

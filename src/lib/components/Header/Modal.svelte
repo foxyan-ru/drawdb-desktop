@@ -10,6 +10,7 @@
 	} from '$lib/stores/diagram';
 	import { saveState, currentDiagramName, currentDiagramPath } from '$lib/stores/saveState';
 	import { MODAL, State, type DBType } from '$lib/data/constants';
+	import { generateSQL } from '$lib/utils/exportSQL';
 
 	let {
 		modal = $bindable(MODAL.NONE),
@@ -40,7 +41,7 @@
 			renameValue = get(currentDiagramName);
 		}
 		if (modal === MODAL.EXPORT_SQL) {
-			generateSQL();
+			refreshExportedSQL();
 		}
 	});
 
@@ -76,61 +77,13 @@
 		close();
 	}
 
-	function generateSQL() {
+	// WHY: delegate to the per-engine generators in utils/exportSQL (the web app's
+	// export path, drawdb-main/src/utils/exportSQL/index.js) instead of an inline
+	// generator, so indices, comments, enums/types, unique constraints and
+	// ON UPDATE/DELETE clauses are all emitted with dialect-correct syntax.
+	function refreshExportedSQL() {
 		const diagram = exportDiagram();
-		const db = diagram.database;
-		const tables = diagram.tables || [];
-		const lines: string[] = [];
-
-		for (const table of tables) {
-			lines.push(`CREATE TABLE ${quoteId(table.name, db)} (`);
-			const fieldLines: string[] = [];
-			const pks: string[] = [];
-
-			for (const field of table.fields) {
-				let line = `  ${quoteId(field.name, db)} ${field.type}`;
-				if (field.size) line += `(${field.size})`;
-				if (field.notNull) line += ' NOT NULL';
-				if (field.unique) line += ' UNIQUE';
-				if (field.increment) {
-					if (db === 'postgresql') line += ' GENERATED ALWAYS AS IDENTITY';
-					else line += ' AUTO_INCREMENT';
-				}
-				if (field.default) line += ` DEFAULT ${field.default}`;
-				if (field.check) line += ` CHECK(${field.check})`;
-				if (field.primary) pks.push(quoteId(field.name, db));
-				fieldLines.push(line);
-			}
-
-			if (pks.length > 0) {
-				fieldLines.push(`  PRIMARY KEY (${pks.join(', ')})`);
-			}
-
-			lines.push(fieldLines.join(',\n'));
-			lines.push(');\n');
-		}
-
-		for (const rel of diagram.relationships || []) {
-			const startTable = tables.find((t) => t.id === rel.startTableId);
-			const endTable = tables.find((t) => t.id === rel.endTableId);
-			if (!startTable || !endTable) continue;
-			const startField = startTable.fields.find((f) => f.id === rel.startFieldId);
-			const endField = endTable.fields.find((f) => f.id === rel.endFieldId);
-			if (!startField || !endField) continue;
-
-			lines.push(
-				`ALTER TABLE ${quoteId(startTable.name, db)} ADD FOREIGN KEY (${quoteId(startField.name, db)}) REFERENCES ${quoteId(endTable.name, db)}(${quoteId(endField.name, db)});`
-			);
-		}
-
-		exportedSQL = lines.join('\n');
-	}
-
-	function quoteId(name: string, db: string): string {
-		if (db === 'postgresql') return `"${name}"`;
-		if (db === 'mysql' || db === 'mariadb') return `\`${name}\``;
-		if (db === 'transactsql') return `[${name}]`;
-		return `"${name}"`;
+		exportedSQL = generateSQL(diagram.database, diagram);
 	}
 
 	async function copySQL() {

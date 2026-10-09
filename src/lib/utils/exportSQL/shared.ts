@@ -1,8 +1,28 @@
-import type { Table, Field, Relationship } from '$lib/data/constants';
+// WHY relative imports: `bun test` does not resolve the SvelteKit `$lib` alias,
+// so modules covered by unit tests import siblings relatively (see connections.ts).
+import type { Table, Field, Relationship, EnumType, CustomType } from '../../data/constants';
+import { dbToTypes, type DataTypeInfo } from '../../data/datatypes';
 
 export interface Diagram {
 	tables: Table[];
 	relationships: Relationship[];
+	// Optional so callers that only hold tables/relationships (e.g. the DB-client
+	// migrate preview) still type-check; only the Postgres exporter consumes them,
+	// matching drawdb-main/src/utils/exportSQL/postgres.js:12-32.
+	enums?: EnumType[];
+	types?: CustomType[];
+	database?: string;
+}
+
+/**
+ * Look up the datatype metadata (hasCheck/isSized/hasQuotes/…) for a field type
+ * in the given dialect. Returns undefined for types the dialect does not list
+ * (custom/enum type names, or types carried over from another dialect) so
+ * callers can fall back to permissive behavior instead of crashing like the web
+ * original does on unknown types.
+ */
+export function getTypeInfo(database: string, type: string): DataTypeInfo | undefined {
+	return dbToTypes[database]?.[type];
 }
 
 /**
@@ -41,9 +61,12 @@ export function isKeyword(str: string): boolean {
 /**
  * Format a field's DEFAULT value for SQL output.
  * SQL functions and keywords are emitted bare; string values are single-quoted.
- * Numeric values are emitted bare.
+ * When `database` is given and the type is known to that dialect, the type's
+ * `hasQuotes` flag decides quoting (drawdb-main/src/utils/exportSQL/shared.js:17-32),
+ * so e.g. VARCHAR DEFAULT '123' stays quoted. Unknown types fall back to emitting
+ * purely numeric values bare.
  */
-export function parseDefault(field: Field): string {
+export function parseDefault(field: Field, database?: string): string {
 	const val = field.default;
 	if (val === '' || val === undefined || val === null) return '';
 
@@ -53,12 +76,29 @@ export function parseDefault(field: Field): string {
 		return str;
 	}
 
+	const typeInfo = database ? getTypeInfo(database, field.type) : undefined;
+	if (typeInfo) {
+		return typeInfo.hasQuotes ? `'${escapeQuotes(str)}'` : str;
+	}
+
 	// If the value is purely numeric, emit it without quotes.
 	if (/^-?\d+(\.\d+)?$/.test(str)) {
 		return str;
 	}
 
 	return `'${escapeQuotes(str)}'`;
+}
+
+/**
+ * Whether a field's CHECK expression should be emitted. The web original only
+ * emits CHECK for types flagged `hasCheck` (e.g. drawdb-main/src/utils/exportSQL/
+ * mysql.js:47-50); types unknown to the dialect keep their CHECK so nothing the
+ * user wrote is silently dropped.
+ */
+export function shouldEmitCheck(field: Field, database: string): boolean {
+	if (!field.check || field.check === '') return false;
+	const typeInfo = getTypeInfo(database, field.type);
+	return typeInfo ? typeInfo.hasCheck : true;
 }
 
 /**

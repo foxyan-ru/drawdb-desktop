@@ -55,8 +55,8 @@ This produces optimized, distributable binaries in `src-tauri/target/release/bun
 
 | Platform | Output |
 |----------|--------|
-| **Windows** | `src-tauri/target/release/bundle/msi/DrawDB_1.0.0_x64_en-US.msi` and `src-tauri/target/release/bundle/nsis/DrawDB_1.0.0_x64-setup.exe` |
-| **macOS** | `src-tauri/target/release/bundle/dmg/DrawDB_1.0.0_aarch64.dmg` or `DrawDB_1.0.0_x64.dmg` |
+| **Windows** | `src-tauri/target/release/bundle/nsis/DrawDB_1.0.0_x64-setup.exe` |
+| **macOS** | `src-tauri/target/release/bundle/dmg/DrawDB_1.0.0_x64.dmg` |
 | **Linux** | `src-tauri/target/release/bundle/deb/draw-db-desktop_1.0.0_amd64.deb` and `src-tauri/target/release/bundle/appimage/DrawDB_1.0.0_amd64.AppImage` |
 
 ### Cross-compilation targets:

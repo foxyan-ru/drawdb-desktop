@@ -1,30 +1,34 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { addTable, addArea, addNote } from '$lib/stores/diagram';
-
-	let activeMode = $state<string | null>(null);
+	import { relationshipMode } from '$lib/stores/connect';
 
 	function handleAddTable() {
 		addTable();
-		activeMode = null;
 	}
 
 	function handleAddArea() {
 		addArea();
-		activeMode = null;
 	}
 
 	function handleAddNote() {
 		addNote();
-		activeMode = null;
 	}
 
 	function toggleRelationshipMode() {
-		activeMode = activeMode === 'relationship' ? null : 'relationship';
+		relationshipMode.update((v) => !v);
 	}
 </script>
 
-<div class="absolute bottom-4 right-4 flex flex-col gap-2 z-30">
+<div class="absolute bottom-4 right-4 flex flex-col items-end gap-2 z-30">
+	{#if $relationshipMode}
+		<div
+			class="max-w-[220px] rounded-lg bg-zinc-800 px-3 py-2 text-xs leading-relaxed text-white shadow-lg dark:bg-zinc-700"
+		>
+			{$_('relationship_hint')}
+		</div>
+	{/if}
+
 	<!-- Add Table -->
 	<button
 		class="w-10 h-10 rounded-full bg-sky-600 hover:bg-sky-700 text-white shadow-lg flex items-center justify-center transition-colors"
@@ -66,7 +70,9 @@
 
 	<!-- Add Relationship Mode -->
 	<button
-		class="w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors {activeMode === 'relationship' ? 'bg-purple-700 ring-2 ring-purple-400' : 'bg-purple-600 hover:bg-purple-700'} text-white"
+		class="w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors {$relationshipMode
+			? 'bg-purple-700 ring-2 ring-purple-400'
+			: 'bg-purple-600 hover:bg-purple-700'} text-white"
 		title={$_('add_relationship')}
 		onclick={toggleRelationshipMode}
 	>

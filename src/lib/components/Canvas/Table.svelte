@@ -2,6 +2,7 @@
   import { settings } from '$lib/stores/settings';
   import { selectedElement } from '$lib/stores/select';
   import { relationships, updateTable } from '$lib/stores/diagram';
+  import { relationshipMode, connecting } from '$lib/stores/connect';
   import {
     tableHeaderHeight,
     tableFieldHeight,
@@ -10,6 +11,7 @@
     type Table,
     type Field
   } from '$lib/data/constants';
+  import { getVisibleFields } from '$lib/utils/calcPath';
 
   let { table, onDragStart }: { table: Table; onDragStart: (e: PointerEvent) => void } =
     $props();
@@ -22,17 +24,10 @@
     ($selectedElement.id === table.id && $selectedElement.element === ObjectType.TABLE)
   );
 
-  let visibleFields = $derived(
-    table.collapsed ? table.fields.filter((f) => isFieldLinked(f)) : table.fields
-  );
-
-  function isFieldLinked(field: Field): boolean {
-    return $relationships.some(
-      (r) =>
-        (r.startTableId === table.id && r.startFieldId === field.id) ||
-        (r.endTableId === table.id && r.endFieldId === field.id)
-    );
-  }
+  // Collapsed-aware: counts every column of a composite FK, not just a
+  // relationship's main field pair, so this matches what Relationship.svelte
+  // anchors its lines to (calcPath.ts getVisibleFields/getVisibleFieldIndex).
+  let visibleFields = $derived(getVisibleFields(table, $relationships));
 
   let tableHeight = $derived(
     tableColorStripHeight + tableHeaderHeight + visibleFields.length * tableFieldHeight
@@ -45,6 +40,18 @@
     // Required for pointer leave to fire properly on touch
     (e.target as Element)?.releasePointerCapture?.(e.pointerId);
     onDragStart(e);
+  }
+
+  function startConnect(e: PointerEvent, field: Field) {
+    if (!e.isPrimary) return;
+    e.stopPropagation();
+    (e.currentTarget as Element)?.setPointerCapture?.(e.pointerId);
+    connecting.set({ from: { tableId: table.id, fieldId: field.id }, x: null, y: null });
+  }
+
+  function isConnectSource(field: Field): boolean {
+    const c = $connecting;
+    return c !== null && c.from.tableId === table.id && c.from.fieldId === field.id;
   }
 
   function getFieldIcon(field: Field): string {
@@ -113,17 +120,30 @@
     <!-- Fields -->
     {#each visibleFields as field, i (field.id)}
       {@const icon = getFieldIcon(field)}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
-        class="flex items-center justify-between px-2 py-1 gap-1 w-full overflow-hidden"
+        class="flex items-center justify-between px-2 py-1 gap-1 w-full overflow-hidden {isConnectSource(
+          field
+        )
+          ? 'bg-purple-50 dark:bg-purple-900/40'
+          : ''} {$relationshipMode || $connecting ? 'cursor-crosshair' : ''}"
         class:border-b={i < visibleFields.length - 1}
         class:border-gray-400={i < visibleFields.length - 1}
+        data-field-row
+        data-table-id={table.id}
+        data-field-id={field.id}
         style:height="{tableFieldHeight}px"
+        onpointerdown={(e) => {
+          if ($relationshipMode) startConnect(e, field);
+        }}
       >
         <div class="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
-          <!-- Field grip dot -->
+          <!-- Field grip dot: drag from here to another field to create a relationship -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
           <span
-            class="shrink-0 w-2.5 h-2.5 rounded-full"
+            class="shrink-0 w-2.5 h-2.5 rounded-full cursor-crosshair transition-transform hover:scale-125"
             style:background-color="#2f68adcc"
+            onpointerdown={(e) => startConnect(e, field)}
           ></span>
           <span class="overflow-hidden text-ellipsis whitespace-nowrap text-sm">
             {field.name}
