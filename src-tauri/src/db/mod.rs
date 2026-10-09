@@ -9,6 +9,8 @@
 //! logs them; sqlx statement logging is disabled on every connection.
 
 use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
@@ -35,55 +37,66 @@ macro_rules! with_pool {
 /// transaction, stopping at the first failure. Uses `sqlx::raw_sql` (the
 /// engines' text/simple-query protocol) so DDL that MySQL can't prepare
 /// still works. Evaluates to an `exec::RawOutcome`.
+///
+/// The body is boxed into a `dyn Future` rather than awaited inline: it
+/// borrows a `&mut Transaction`/`&mut PoolConnection` as a sqlx `Executor`,
+/// and awaiting that directly inside `db_execute` (itself reachable from
+/// `tauri::generate_handler!`) hits the same async-fn/HRTB inference limit
+/// as `postgres::introspect` ("implementation of `Executor`/`Send` is not
+/// general enough") — boxing gives the executor borrow a concrete,
+/// already-resolved type before it reaches that bound check.
 macro_rules! run_statements {
     ($pool:expr, $statements:expr, $use_tx:expr) => {{
-        let pool = $pool;
-        let statements: &[String] = $statements;
-        let mut outcomes: Vec<exec::StmtOutcome> = Vec::with_capacity(statements.len());
-        let mut error: Option<String> = None;
-        let mut rolled_back = false;
-        if $use_tx {
-            match pool.begin().await {
-                Err(err) => error = Some(format!("Failed to begin transaction: {err}")),
-                Ok(mut tx) => {
-                    let mut failed = false;
-                    for stmt in statements {
-                        match sqlx::raw_sql(stmt.as_str()).execute(&mut *tx).await {
-                            Ok(res) => outcomes.push(exec::StmtOutcome::Ok(res.rows_affected())),
-                            Err(err) => {
-                                outcomes.push(exec::StmtOutcome::Err(err.to_string()));
-                                failed = true;
-                                break;
+        let fut: Pin<Box<dyn Future<Output = exec::RawOutcome> + Send + '_>> = Box::pin(async move {
+            let pool = $pool;
+            let statements: &[String] = $statements;
+            let mut outcomes: Vec<exec::StmtOutcome> = Vec::with_capacity(statements.len());
+            let mut error: Option<String> = None;
+            let mut rolled_back = false;
+            if $use_tx {
+                match pool.begin().await {
+                    Err(err) => error = Some(format!("Failed to begin transaction: {err}")),
+                    Ok(mut tx) => {
+                        let mut failed = false;
+                        for stmt in statements {
+                            match sqlx::raw_sql(stmt.as_str()).execute(&mut *tx).await {
+                                Ok(res) => outcomes.push(exec::StmtOutcome::Ok(res.rows_affected())),
+                                Err(err) => {
+                                    outcomes.push(exec::StmtOutcome::Err(err.to_string()));
+                                    failed = true;
+                                    break;
+                                }
                             }
                         }
-                    }
-                    if failed {
-                        match tx.rollback().await {
-                            Ok(()) => rolled_back = true,
-                            Err(err) => error = Some(format!("Rollback failed: {err}")),
-                        }
-                    } else if let Err(err) = tx.commit().await {
-                        error = Some(format!("Commit failed: {err}"));
-                    }
-                }
-            }
-        } else {
-            match pool.acquire().await {
-                Err(err) => error = Some(format!("Failed to acquire a connection: {err}")),
-                Ok(mut conn) => {
-                    for stmt in statements {
-                        match sqlx::raw_sql(stmt.as_str()).execute(&mut *conn).await {
-                            Ok(res) => outcomes.push(exec::StmtOutcome::Ok(res.rows_affected())),
-                            Err(err) => {
-                                outcomes.push(exec::StmtOutcome::Err(err.to_string()));
-                                break;
+                        if failed {
+                            match tx.rollback().await {
+                                Ok(()) => rolled_back = true,
+                                Err(err) => error = Some(format!("Rollback failed: {err}")),
                             }
+                        } else if let Err(err) = tx.commit().await {
+                            error = Some(format!("Commit failed: {err}"));
                         }
                     }
                 }
+            } else {
+                match pool.acquire().await {
+                    Err(err) => error = Some(format!("Failed to acquire a connection: {err}")),
+                    Ok(mut conn) => {
+                        for stmt in statements {
+                            match sqlx::raw_sql(stmt.as_str()).execute(&mut *conn).await {
+                                Ok(res) => outcomes.push(exec::StmtOutcome::Ok(res.rows_affected())),
+                                Err(err) => {
+                                    outcomes.push(exec::StmtOutcome::Err(err.to_string()));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
             }
-        }
-        exec::RawOutcome { outcomes, error, rolled_back }
+            exec::RawOutcome { outcomes, error, rolled_back }
+        });
+        fut.await
     }};
 }
 
