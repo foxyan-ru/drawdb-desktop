@@ -17,6 +17,13 @@ import {
 import { undoStack, redoStack, snapshotForUndo, resetCoalescing, clearHistory } from './undoRedo';
 import { selectedElement, clearSelection } from './select';
 import { transform } from './transform';
+import { currentDiagramName } from './saveState';
+import {
+	parseClipboardElement,
+	prepareForPaste,
+	serializeClipboardElement,
+	type ClipboardElement
+} from '$lib/utils/clipboard';
 
 export const database = writable<DBType>(DB.GENERIC);
 export const tables = writable<Table[]>([]);
@@ -319,11 +326,16 @@ export function loadDiagram(data: any) {
 	clearSelection();
 }
 
+// WHY: key names follow the web JSON schema (drawdb-main/src/data/schemas.js:224-295),
+// which requires `subjectAreas` (not `areas`) and accepts `title`, so a desktop-saved
+// .ddb/.json imports cleanly into drawdb.app. loadDiagram keeps the `areas` fallback
+// for files saved by older desktop builds.
 export function exportDiagram() {
 	return {
+		title: get(currentDiagramName),
 		tables: get(tables),
 		relationships: get(relationships),
-		areas: get(areas),
+		subjectAreas: get(areas),
 		notes: get(notes),
 		enums: get(enums),
 		types: get(types),
@@ -369,4 +381,102 @@ export function redo() {
 	undoStack.update((s) => [...s, { message: entry.message, snapshot: current }]);
 	loadDiagram(entry.snapshot);
 	resetCoalescing();
+}
+
+// --- Clipboard: copy / paste / duplicate (web ControlPanel.jsx:901-1040) ---
+
+/**
+ * In-app clipboard: JSON text of the last copied table/area/note. This is the
+ * source of truth for paste; the OS clipboard is written best-effort on copy
+ * (so the JSON can be pasted into drawdb.app or a text editor, like web) but is
+ * only *read* when this is empty — reading it via `navigator.clipboard.readText()`
+ * can trigger a permission prompt / paste callout in WebView2 and WKWebView.
+ */
+export const clipboard = writable<string | null>(null);
+
+/** The currently selected table/area/note as a clipboard element, or null. */
+function selectedClipboardElement(): ClipboardElement | null {
+	const $sel = get(selectedElement);
+	switch ($sel.element) {
+		case ObjectType.TABLE: {
+			const table = get(tables).find((t) => t.id === $sel.id);
+			return table ? { kind: 'table', data: table } : null;
+		}
+		case ObjectType.AREA: {
+			const area = get(areas).find((a) => a.id === $sel.id);
+			return area ? { kind: 'area', data: area } : null;
+		}
+		case ObjectType.NOTE: {
+			const note = get(notes).find((n) => n.id === $sel.id);
+			return note ? { kind: 'note', data: note } : null;
+		}
+		default:
+			return null;
+	}
+}
+
+/** True when a table/area/note is selected, i.e. copy/cut/duplicate have a target. */
+export function hasCopyableSelection(): boolean {
+	return selectedClipboardElement() !== null;
+}
+
+/** Inserts an offset copy of `el` through the normal add paths (undo snapshot included). */
+function insertPastedElement(el: ClipboardElement) {
+	const prepared = prepareForPaste(el, {
+		newTableId: nanoid(),
+		newIndex: el.kind === 'area' ? get(areas).length : get(notes).length
+	});
+	if (prepared.kind === 'table') addTable({ table: prepared.data });
+	else if (prepared.kind === 'area') addArea(prepared.data);
+	else addNote(prepared.data);
+}
+
+/**
+ * Copies the selected table/area/note. Returns false when nothing copyable is
+ * selected (relationships are not copied, as in web's `copy`).
+ */
+export function copyElement(): boolean {
+	const el = selectedClipboardElement();
+	if (!el) return false;
+	const text = serializeClipboardElement(el);
+	clipboard.set(text);
+	try {
+		void navigator.clipboard?.writeText(text).catch(() => {
+			// OS clipboard unavailable/denied — the in-app clipboard above still works.
+		});
+	} catch {
+		// no navigator (tests / non-browser) — in-app clipboard only
+	}
+	return true;
+}
+
+/**
+ * Pastes the clipboard element at +20/+20 with a new id. Returns false when the
+ * clipboard is empty or does not hold a table/area/note.
+ */
+export async function pasteElement(): Promise<boolean> {
+	let text = get(clipboard);
+	if (!text) {
+		try {
+			text = (await navigator.clipboard?.readText()) ?? null;
+		} catch {
+			text = null;
+		}
+	}
+	const el = parseClipboardElement(text);
+	if (!el) return false;
+	insertPastedElement(el);
+	return true;
+}
+
+/**
+ * Duplicates the selected table/area/note at +20/+20 without touching the
+ * clipboard (web's `duplicate` doesn't either). Returns false when nothing
+ * copyable is selected.
+ */
+export function duplicateElement(): boolean {
+	const el = selectedClipboardElement();
+	if (!el) return false;
+	insertPastedElement(el);
+	return true;
 }
