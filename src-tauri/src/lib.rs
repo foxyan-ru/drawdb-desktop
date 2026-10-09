@@ -3,6 +3,8 @@ use std::fs;
 use std::path::PathBuf;
 use tauri::Manager;
 
+mod db;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DiagramFile {
     pub path: String,
@@ -181,6 +183,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
+        .manage(db::DbState::default())
         .invoke_handler(tauri::generate_handler![
             get_app_data_dir,
             list_diagrams,
@@ -194,6 +197,11 @@ pub fn run() {
             add_recent_file,
             save_settings,
             load_settings,
+            db::db_connect,
+            db::db_test,
+            db::db_introspect,
+            db::db_execute,
+            db::db_disconnect,
         ])
         .run(tauri::generate_context!())
         .expect("error while running DrawDB");

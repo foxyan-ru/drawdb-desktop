@@ -6,7 +6,8 @@
 	import { saveState, currentDiagramName } from '$lib/stores/saveState';
 	import { undoStack, redoStack } from '$lib/stores/undoRedo';
 	import { transform, setTransform } from '$lib/stores/transform';
-	import { openModal } from '$lib/stores/modal';
+	import { openModal, openConnectionManager } from '$lib/stores/modal';
+	import ConnectionManagerModal from './ConnectionManagerModal.svelte';
 	import { MODAL, DB, State, type DBType } from '$lib/data/constants';
 	import { databases } from '$lib/data/databases';
 	import {
@@ -280,6 +281,16 @@
 		{/if}
 	</div>
 
+	<!-- DB client (desktop-only, CLAUDE.md §9) -->
+	<button
+		class="px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 flex items-center gap-1 border-l border-zinc-200 dark:border-zinc-700 ml-1"
+		title={$_('db_connections')}
+		onclick={openConnectionManager}
+	>
+		<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v4a6 6 0 0 1-12 0V8z"/><path d="M12 18v4"/></svg>
+		{$_('db_connections_short')}
+	</button>
+
 	<!-- Spacer -->
 	<div class="flex-1"></div>
 
@@ -339,3 +350,5 @@
 		{/if}
 	</button>
 </header>
+
+<ConnectionManagerModal />
